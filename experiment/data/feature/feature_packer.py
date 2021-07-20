@@ -17,6 +17,7 @@ class FeaturePacker:
         self,
         pad_mode: str,
         max_len: int,
+        len_thresh: int = 0.5,
         stats_path: Optional[str] = None,
         pad_constant: float = 0.) -> None:
         """
@@ -28,6 +29,8 @@ class FeaturePacker:
             Padding mode. Two available method constant|dup.
         max_len: int
             Maximum length of packed signal (in second)
+        len_thresh: int
+            Threshold for discarding chunk remainder. If chunk duration is less than len_thresh, file is ignored (in second)
         stats_path: Optional[str]
             Path to saved statistic called from self.compute_global_stats(path)
         pad_constant: float
@@ -35,6 +38,7 @@ class FeaturePacker:
         """
         self.pad_mode: str = pad_mode.lower().strip();
         self.max_len: int = max_len;
+        self.len_thresh: int = len_thresh;
 
         if self.pad_mode == "constant":
             self.pad_fn: Callable = partial(pad_constant, constant=pad_constant);
@@ -42,33 +46,6 @@ class FeaturePacker:
             self.pad_fn: Callable = pad_dup;
 
         self.stats_path: Optional[str] = stats_path;
-
-    def compute_global_stats(self, data: List[Dict[str, Tensor]], save_path: str = "stats.pckl") -> None:
-        """
-        Compute mean, and std deviation of given list of samples
-
-        Arguments
-        ---------
-        data: List[Dict[str, Tensor]]
-            List of sample, dictionary of feature and its label
-        save_path: str
-            Path to saved statistic
-        """
-        feat_dim: int = data[0]["feature"].shape[-1];
-        N: int = 0;
-        sum_x: Tensor = torch.zeros([feat_dim,]);  # Sigma_i x_i
-        sum_x2: Tensor = torch.zeros([feat_dim,]);  # Sigma_i x_i^2
-
-        for d in data:
-            sum_x = sum_x + d["feature"].sum(dim=0);
-            sum_x2 = sum_x2 + d["feature"].square().sum(dim=0);
-            N += d["feature"].shape[0];
-        
-        mean: Tensor = sum_x / N;
-        std: Tensor = torch.sqrt(sum_x2 / N - mean.square());
-
-        with open(save_path, "wb") as f:
-            pickle.dump([mean, std], f);
 
     def normalize(self, sample: Dict[str, Tensor]) -> Dict[str, Tensor]:
         """
@@ -96,12 +73,15 @@ class FeaturePacker:
 
         # if global mean, std is given
         if self.stats_path is not None:
-            with open(self.stats_path) as f:
+            with open(self.stats_path, "rb") as f:
                 mean, std = pickle.load(f);
         # if mean, std is not given, normalize by sample
         else:
-            mean: Tensor = feature.mean(dim=0);
-            std: Tensor = torch.sqrt(torch.unsqueeze(feature.var(dim=0), dim=0));
+            mean: Tensor = feature.mean(dim=-1);
+            std: Tensor = torch.sqrt(feature.var(dim=-1));
+        
+        mean = mean.unsqueeze(dim=-1);
+        std = std.unsqueeze(dim=-1);
 
         feature = feature - mean;  # center
         feature = feature / (std + 1e-8);  # scale

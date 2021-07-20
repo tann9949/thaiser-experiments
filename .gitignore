@@ -3,3 +3,4 @@ venv
 **/.DS_store
 **/__pycache__
 **/*.ipynb*
+**/*.pckl

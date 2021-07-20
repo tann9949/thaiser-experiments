@@ -1,11 +1,15 @@
-from typing import List, Dict, Union, Tuple
+import os
+import pickle
+from typing import Dict, List, Tuple, Union
 
+import pandas as pd
+import torch
 from torch import Tensor
 from tqdm import tqdm
-import pandas as pd
 
-from .feature.featurizer import Featurizer
 from .feature.feature_packer import FeaturePacker
+from .feature.featurizer import Featurizer
+
 
 class BaseDataLoader:
     """
@@ -74,13 +78,49 @@ class BaseDataLoader:
         """
         raise NotImplementedError();
 
+    def compute_global_stats(self, save_path: str) -> None:
+        """
+        Compute mean, and std deviation from self.train
+
+        Arguments
+        ---------
+        save_path: str
+            Path to saved statistic
+        """
+        print("Extracting feature for calculating stats...")
+        data: List[Dict[str, Tensor]] = [self.featurizer(sample) for sample in tqdm(self.train)];
+        feat_dim: int = data[0]["feature"].shape[0];
+        N: int = 0;
+        sum_x: Tensor = torch.zeros([feat_dim,], dtype=torch.float64);  # Sigma_i x_i
+        sum_x2: Tensor = torch.zeros([feat_dim,], dtype=torch.float64);  # Sigma_i x_i^2
+
+        print("Computing mean and standard deviation...")
+        for d in tqdm(data):
+            sum_x = sum_x + d["feature"].sum(dim=-1);
+            sum_x2 = sum_x2 + d["feature"].square().sum(dim=-1);
+            N += d["feature"].shape[-1];
+        
+        mean: Tensor = sum_x / N;
+        std: Tensor = torch.sqrt(sum_x2 / N - mean.square());
+
+        print("Finish calculating stats!")
+        with open(save_path, "wb") as f:
+            pickle.dump([mean.to(torch.float32), std.to(torch.float32)], f);
+
     def setup(self):
         """
         Initialize train, val, test samples
         """
+        # setup train, val, test
         self.setup_train();
         self.setup_val();
         self.setup_test();
+
+        # compute global stats if necessary
+        if self.packer.stats_path is not None:
+            if not os.path.exists(self.packer.stats_path):
+                print(f"Global statistics `{self.packer.stats_path}` does not exists. Creating one...");
+                self.compute_global_stats(self.packer.stats_path);
 
     def prepare(self, frame_size: int) -> Tuple[
         Dict[str, Union[Tensor, str]],

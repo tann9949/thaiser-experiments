@@ -93,6 +93,7 @@ class Featurizer:
                         };
 
             feature: Tensor = self.featurizer(wav, **feat_param);
+            feature = feature.transpose(0, 1);
             return {"feature": feature, "emotion": emotion};
         else:
             return {"feature": wav, "emotion": emotion};
