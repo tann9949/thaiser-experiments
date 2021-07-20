@@ -61,9 +61,9 @@ def get_metadata_from_name(name: str) -> Dict[str, Union[str, int]]:
     return data
 
 
-def get_full_path(wav_root: str, f_name: str) -> str:
+def get_full_path(wav_root: str, f_name: str) -> Optional[str]:
     """
-    Get file's absolute path
+    Get file's absolute path. Return None if folder does not exists
 
     Argument
     --------
@@ -101,7 +101,7 @@ def get_full_path(wav_root: str, f_name: str) -> str:
         wav_path = os.path.join(wav_root, wav_path);
 
         if not os.path.exists(wav_path):
-            raise FileNotFoundError(f"Path `{wav_path}` does not exists")
+            return None;
         return wav_path;
 
 
@@ -183,7 +183,7 @@ def preprocess_THAISER(raw_path: str, n_workers: Optional[int] = None) -> None:
         copy(f"{thaiser_root}/emotion_label.json", f"{wav_root}/emotion_label.json");
     
     # specify whether to delete old files
-    print(f"Finished processing all files. Delete {thaiser_root}? [Y/n]");
+    print(f"Finished processing all files. Delete {thaiser_root}? [Y/n]", end=" ");
     inp: str = input();
     if inp.strip().lower() == "y":
         os.removedirs(thaiser_root);
@@ -193,6 +193,12 @@ def preprocess_THAISER(raw_path: str, n_workers: Optional[int] = None) -> None:
     
     # generate dataset label
     label_path: str = f"{wav_root}/labels.csv"
+    if os.path.exists(label_path):
+        print(f"label exists at `{label_path}`. Would you like to re-generate labels.csv? [Y/n]", end=" ");
+        prompt: str = input();
+        if prompt.lower().strip() == "y":
+            os.remove(label_path);
+    
     if not os.path.exists(label_path):
         # read label, demography file
         with open(f"{wav_root}/emotion_label.json") as f:
@@ -202,49 +208,63 @@ def preprocess_THAISER(raw_path: str, n_workers: Optional[int] = None) -> None:
         demography: pd.DataFrame = pd.DataFrame(demography["data"]).set_index("Actor's ID");
 
         # format label and demography
-        data: List[Any] = [
-            [
-                "filename", 
-                "path", 
-                "studio_id", 
-                "mic", 
-                "actor_id", 
-                "actor_gender",
-                "actor_age",
-                "room_id", 
-                "turn_type", 
-                "assigned_emotion",
-                "agreement",
-                "neutral_score",
-                "angry_score",
-                "happy_score",
-                "sad_score",
-                "frustrated_score",
-            ]
-        ];
+        data: List[Any] = [];
         for f_name, label in label.items():
-            metadata = get_metadata_from_name(f_name);
-            score: Dict[str, float] = get_score_from_label(label[0]["annotated"]);
+            f_name = remove_extension(f_name);
+            if f_name[0] == "s":
+                # if studio, iterate over different mics [con, clip, middle]
+                mics: List[str] = ["con", "clip", "middle"];
+            elif f_name[0] == "z":
+                # if zoom
+                mics: List[str] = ["mic"];
+            else:
+                raise NameError(f"Invalid name format: `{f_name}`");
 
-            data.append([
-                remove_extension(f_name),
-                get_full_path(wav_root, f_name),
-                metadata["studio_id"],
-                metadata["mic"],
-                metadata["actor_id"],
-                demography.loc[metadata["actor_id"]]["Sex"],
-                demography.loc[metadata["actor_id"]]["Age"],
-                metadata["room_id"],
-                metadata["turn_type"],
-                label[0]["assigned_emo"],
-                label[0]["agreement"],
-                score["neutral"],
-                score["angry"],
-                score["happy"],
-                score["sad"],
-                score["frustrated"],
-            ]);
+            for mic in mics:
+                f_name = "_".join([f_name.split("_")[0], mic] + f_name.split("_")[2:]);
+                if get_full_path(wav_root, f_name) is None:
+                    continue;
+                metadata = get_metadata_from_name(f_name);
+                score: Dict[str, float] = get_score_from_label(label[0]["annotated"]);
+                if sum(score.values()) == 0.:
+                    continue;
 
-        data: pd.DataFrame = pd.DataFrame(data);
+                data.append([
+                    f_name,
+                    get_full_path(wav_root, f_name),
+                    metadata["studio_id"],
+                    metadata["mic"],
+                    metadata["actor_id"],
+                    demography.loc[metadata["actor_id"]]["Sex"],
+                    demography.loc[metadata["actor_id"]]["Age"],
+                    metadata["room_id"],
+                    metadata["turn_type"],
+                    label[0]["assigned_emo"],
+                    label[0]["agreement"],
+                    score["neutral"],
+                    score["angry"],
+                    score["happy"],
+                    score["sad"],
+                    score["frustrated"],
+                ]);
+
+        data: pd.DataFrame = pd.DataFrame(data, columns=[
+            "filename", 
+            "path", 
+            "studio_id", 
+            "mic", 
+            "actor_id", 
+            "actor_gender",
+            "actor_age",
+            "room_id", 
+            "turn_type", 
+            "assigned_emotion",
+            "agreement",
+            "neutral_score",
+            "angry_score",
+            "happy_score",
+            "sad_score",
+            "frustrated_score",
+        ]);
         data.to_csv(label_path, index=False);
     
