@@ -3,6 +3,7 @@ import pickle
 from typing import Dict, List, Tuple, Union
 
 import pandas as pd
+from pandas.core import frame
 import torch
 from torch import Tensor
 from tqdm import tqdm
@@ -24,8 +25,8 @@ class BaseDataLoader:
         """
         self.label_path: str;
         self.label: pd.DataFrame = pd.read_csv(label_path);
-        self.featurizer = featurizer;
-        self.packer = packer;
+        self.featurizer: Featurizer = featurizer;
+        self.packer: FeaturePacker = packer;
 
         # initialize train, val, test
         # must call self.setup() to instantiate these variables
@@ -129,23 +130,23 @@ class BaseDataLoader:
     ]:
         # prepare train
         print("Preparing Training Samples");
-        train_samples: List[Dict[str, Union[Tensor, int]]] = list();
+        train_samples: List[Dict[str, Union[Tensor, str]]] = list();
         for sample in tqdm(self.train):
-            feature: Dict[str, Union[Tensor, int]] = self.featurizer(sample);
+            feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample);
             train_samples += self.packer(feature, frame_size=frame_size);
 
         # prepare val
         print("Preparing Validation Samples");
-        val_samples: List[Dict[str, Union[Tensor, int]]] = list();
+        val_samples: List[Dict[str, Union[Tensor, str]]] = list();
         for sample in tqdm(self.val):
-            feature: Dict[str, Union[Tensor, int]] = self.featurizer(sample);
-            val_samples += self.packer(feature, frame_size=frame_size);
+            feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample);
+            val_samples.append(self.packer(feature, frame_size=frame_size, test=True));
             
         # prepare train
         print("Preparing Testing Samples");
-        test_samples: List[Dict[str, Union[Tensor, int]]] = list();
+        test_samples: List[Dict[str, Union[Tensor, str]]] = list();
         for sample in tqdm(self.test):
-            feature: Dict[str, Union[Tensor, int]] = self.featurizer(sample, test=True);
-            test_samples += self.packer(feature, frame_size=frame_size);
+            feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample, test=True);
+            test_samples.append(self.packer(feature, frame_size=frame_size, test=True));
 
         return train_samples, val_samples, test_samples

@@ -1,5 +1,6 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional, Union
 import random
+import os
 
 import torchaudio
 from torch import Tensor
@@ -46,7 +47,7 @@ class Featurizer:
         else:
             raise NameError(f"Unrecognized feature type `{feature_type}`. Only raw|spectrogram|fbank|mfcc available");
 
-    def __call__(self, sample: Dict[str, str], test: bool = False) -> Dict[str, Tensor]:
+    def __call__(self, sample: Dict[str, str], test: bool = False) -> Dict[str, Union[str, Tensor]]:
         """
         Extract Feature according to `feature_type` attribute
         
@@ -66,6 +67,7 @@ class Featurizer:
         # unpack sample
         wav_path: str = sample["feature"];
         emotion: Tensor = sample["emotion"];
+        name: str = ".".join(os.path.basename(wav_path).split(".")[:-1]);
 
         wav, sampling_rate = torchaudio.load(wav_path);  # load audio
         # if wav is not mono
@@ -94,6 +96,6 @@ class Featurizer:
 
             feature: Tensor = self.featurizer(wav, **feat_param);
             feature = feature.transpose(0, 1);
-            return {"feature": feature, "emotion": emotion};
+            return {"name": name, "feature": feature, "emotion": emotion};
         else:
-            return {"feature": wav, "emotion": emotion};
+            return {"name": name, "feature": wav, "emotion": emotion};

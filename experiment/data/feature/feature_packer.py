@@ -47,14 +47,14 @@ class FeaturePacker:
 
         self.stats_path: Optional[str] = stats_path;
 
-    def normalize(self, sample: Dict[str, Tensor]) -> Dict[str, Tensor]:
+    def normalize(self, sample: Dict[str, Union[str, Tensor]]) -> Dict[str, Union[str, Tensor]]:
         """
         Normalize feature according to given stats path attribute
         into a zero mean and unit variance.
         If stats_path is None, normalized by sample, else
         utterance is normalize per-sample
 
-        # TODO: this normalization must be skipped if use raw audio
+        TODO: this normalization must be skipped if use raw audio
 
         Argument
         --------
@@ -70,6 +70,7 @@ class FeaturePacker:
         # unpack
         feature: Tensor = sample["feature"];
         emotion: int = sample["emotion"];
+        name: str = sample["name"];
 
         # if global mean, std is given
         if self.stats_path is not None:
@@ -85,9 +86,16 @@ class FeaturePacker:
 
         feature = feature - mean;  # center
         feature = feature / (std + 1e-8);  # scale
-        return {"feature": feature, "emotion": emotion};
+        return {"name": name, "feature": feature, "emotion": emotion};
 
-    def __call__(self, sample: Dict[str, Tensor], frame_size: int):
+    def __call__(
+        self, 
+        sample: Dict[str, Union[str, Tensor]], 
+        frame_size: int, 
+        test: bool = False) -> Union[
+            Dict[str, Union[str, Tensor]],
+            Dict[str, Union[str, List[Tensor], Tensor]]
+        ]:
         """
         Split file according to class attribute, max_len and
         pad the remainding file
@@ -95,13 +103,16 @@ class FeaturePacker:
         Argument
         --------
         sample: Dict[str, Tensor]
-            Sample to be splitted and pad. Dictonary must be in the following format {"feature": "<path>", "emotion": "<emotion>"}
+            Sample to be splitted and pad. Dictonary must be in the following format {"name": <fname>, "feature": "<path>", "emotion": "<emotion>"}
         frame_size: int
             Size of each feature frame in second
+        test: bool
+            Specify whether to pack the test data or not. By packing test data, it returns list of Tensor
         """
         # unpack
         x: Tensor = sample["feature"];  # feature Tensor
         y: int = sample["emotion"];  # emotion label
+        name: str = sample["name"];
 
         # e.g.
         # 1 frame = 10 ms = 0.01 s (10ms overlapping window)
@@ -111,24 +122,36 @@ class FeaturePacker:
 
         time_dim: int = x.shape[-1];
         x_chopped: List[Tensor] = list();
+
+        # split to chunk and pad if not specify test
         for i in range(time_dim):
             if i % max_frame == 0 and i != 0:  # if reach max_frame
                 xi: Tensor = x[:, i - max_frame:i];
                 assert xi.shape[-1] == max_frame, xi.shape;
-                x_chopped.append(self.normalize({"feature": xi, "emotion": y}));
+                normalized_sample: Tensor = self.normalize({"name": name, "feature": xi, "emotion": y})["feature"];
+                x_chopped.append(normalized_sample);
         if time_dim < max_frame:  # if file length not reach max_frame
-            if self.pad_fn:
+            if not test:
                 xi: Tensor = self.pad_fn(x, max_len=max_frame);
                 assert xi.shape[-1] == max_frame;
             else:
                 xi: Tensor = x;
-            x_chopped.append(self.normalize({"feature": xi, "emotion": y}));
+            normalized_sample: Tensor = self.normalize({"name": name, "feature": xi, "emotion": y})["feature"];
+            x_chopped.append(normalized_sample);
         else:  # if file is longer than n_frame, pad remainder
             remainder: Tensor = x[:, x.shape[-1] - x.shape[0] % max_frame:];
             if not remainder.shape[-1] <= self.len_thresh:
-                if self.pad_fn:
+                if not test:
                     xi: Tensor = self.pad_fn(remainder, max_len=max_frame);
                 else:
                     xi: Tensor = x;
-                x_chopped.append(self.normalize({"feature": xi, "emotion": y}));
-        return x_chopped;
+            normalized_sample: Tensor = self.normalize({"name": name, "feature": xi, "emotion": y})["feature"];
+            x_chopped.append(normalized_sample);
+
+        # pack to dict
+        if test:
+            sample: Dict[str, Union[List[Tensor], Tensor]] = {"name": name, "feature": x_chopped, "emotion": y};
+        else:
+            sample: Dict[str, Tensor] = [{"name": name, "feature": xi, "emotion": y} for xi in x_chopped];
+
+        return sample;
