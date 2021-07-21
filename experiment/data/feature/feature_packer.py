@@ -133,9 +133,10 @@ class FeaturePacker:
         if time_dim < max_frame:  # if file length not reach max_frame
             if not test:
                 xi: Tensor = self.pad_fn(x, max_len=max_frame);
-                assert xi.shape[-1] == max_frame;
+                assert xi.shape[-1] == max_frame, xi.shape;
             else:
                 xi: Tensor = x;
+                assert xi.shape[-1] <= max_frame, xi.shape;
             normalized_sample: Tensor = self.normalize({"name": name, "feature": xi, "emotion": y})["feature"];
             x_chopped.append(normalized_sample);
         else:  # if file is longer than n_frame, pad remainder
@@ -143,8 +144,10 @@ class FeaturePacker:
             if not remainder.shape[-1] <= self.len_thresh:
                 if not test:
                     xi: Tensor = self.pad_fn(remainder, max_len=max_frame);
+                    assert xi.shape[-1] == max_frame, xi.shape;
                 else:
-                    xi: Tensor = x;
+                    xi: Tensor = remainder;
+                    assert xi.shape[-1] <= max_frame, xi.shape;
             normalized_sample: Tensor = self.normalize({"name": name, "feature": xi, "emotion": y})["feature"];
             x_chopped.append(normalized_sample);
 

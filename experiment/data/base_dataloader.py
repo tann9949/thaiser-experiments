@@ -3,9 +3,9 @@ import pickle
 from typing import Dict, List, Tuple, Union
 
 import pandas as pd
-from pandas.core import frame
 import torch
 from torch import Tensor
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from .feature.feature_packer import FeaturePacker
@@ -123,10 +123,10 @@ class BaseDataLoader:
                 print(f"Global statistics `{self.packer.stats_path}` does not exists. Creating one...");
                 self.compute_global_stats(self.packer.stats_path);
 
-    def prepare(self, frame_size: int) -> Tuple[
-        Dict[str, Union[Tensor, str]],
-        Dict[str, Union[Tensor, str]],
-        Dict[str, Union[Tensor, str]]
+    def prepare(self, frame_size: int, batch_size: int, num_workers: int = 1) -> Tuple[
+        DataLoader,
+        DataLoader,
+        DataLoader
     ]:
         # prepare train
         print("Preparing Training Samples");
@@ -149,4 +149,8 @@ class BaseDataLoader:
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample, test=True);
             test_samples.append(self.packer(feature, frame_size=frame_size, test=True));
 
-        return train_samples, val_samples, test_samples
+        train_dataloader: DataLoader = DataLoader(train_samples, batch_size=batch_size, num_workers=1);
+        val_dataloader: DataLoader = DataLoader(val_samples, batch_size=1, num_workers=1);
+        test_dataloader: DataLoader = DataLoader(test_samples, batch_size=1, num_workers=1);
+
+        return train_dataloader, val_dataloader, test_dataloader
