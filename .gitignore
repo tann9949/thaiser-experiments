@@ -4,3 +4,4 @@ venv
 **/__pycache__
 **/*.ipynb*
 **/*.pckl
+**/lightning_logs

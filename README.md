@@ -40,5 +40,9 @@ Then, to preprocess all data and generate label csv file, run the following comm
 $ python preprocess/preprocess_dataset.py --raw-path dataset/raw
 ```
 
+## Usage
+*TBD*
+
 ## Authors
 Chompakorn Chaksangchaichot
+Ekapol Chungsuwanich
