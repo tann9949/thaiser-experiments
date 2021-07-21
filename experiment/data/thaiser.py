@@ -14,11 +14,12 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
     Labels are formatted in hard label (e.g. [0.05, 0.01, 0.74, 0.2])
     """
     def __init__(self, 
-        fold: int,
         agreement: float,
+        fold: int = 0,
         train_mic: str = "con",
         test_mic: Optional[str] = None,
         include_fru: bool = False,
+        include_zoom: bool = False,
         **kwargs):
         """
         Thai SER DataLoader constructor
@@ -34,6 +35,7 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
         self.fold = fold;
         self.agreement: float = agreement;
         self.train_mic: str = train_mic;
+        self.include_zoom: bool = include_zoom;
 
         if include_fru:
             self.score_cols: List[str] = ["neutral_score", "angry_score", "happy_score", "sad_score", "frustrated_score"];
@@ -56,13 +58,22 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
             7: [list(range(11, 81)), list(range(1, 6)), list(range(6, 11))],
         };
         self.train_studios, self.val_studios, self.test_studios = fold_mapping[self.fold];
+
+    def set_fold(self, fold: int) -> None:
+        self.fold = fold;
         
     def setup_train(self):
         label: pd.DataFrame = self.label;
+        if self.include_zoom:
+            zoom: pd.DataFrame = self.label[self.label["mic"] == "mic"]
         label = label[label["agreement"] > self.agreement];
         label = label[label["mic"] == self.train_mic];
         
         train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)];
+
+        if self.include_zoom:
+            train = pd.concat([train, zoom], axis=0).reset_index(drop=True);
+
         scores: np.ndarray = train[self.score_cols].values.astype(float);
         paths: np.ndarray = train["path"].values;
         

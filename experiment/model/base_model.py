@@ -55,7 +55,7 @@ class BaseModel(pl.LightningModule):
                 tmp_count[pred_emotion] = count + 1;
                 tmp_score[pred_emotion] = score + pred_score;
 
-            unique, count = tmp_count.unique(return_counts=True)
+            unique, count = tmp_count.unique(return_counts=True);
 
             if sum([1 if c == count.max() else 0 for c in count]) > 1:
                 scores: Tensor = torch.zeros([len(count),]);

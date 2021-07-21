@@ -149,7 +149,7 @@ class BaseDataLoader:
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample, test=True);
             test_samples.append(self.packer(feature, frame_size=frame_size, test=True));
 
-        train_dataloader: DataLoader = DataLoader(train_samples, batch_size=batch_size, num_workers=1);
+        train_dataloader: DataLoader = DataLoader(train_samples, batch_size=batch_size, num_workers=1, shuffle=True);
         val_dataloader: DataLoader = DataLoader(val_samples, batch_size=1, num_workers=1);
         test_dataloader: DataLoader = DataLoader(test_samples, batch_size=1, num_workers=1);
 

@@ -131,30 +131,22 @@ class FeaturePacker:
                 normalized_sample: Tensor = self.normalize({"name": name, "feature": xi, "emotion": y})["feature"];
                 x_chopped.append(normalized_sample);
         if time_dim < max_frame:  # if file length not reach max_frame
-            if not test:
-                xi: Tensor = self.pad_fn(x, max_len=max_frame);
-                assert xi.shape[-1] == max_frame, xi.shape;
-            else:
-                xi: Tensor = x;
-                assert xi.shape[-1] <= max_frame, xi.shape;
+            xi: Tensor = self.pad_fn(x, max_len=max_frame);
+            assert xi.shape[-1] == max_frame, xi.shape;
             normalized_sample: Tensor = self.normalize({"name": name, "feature": xi, "emotion": y})["feature"];
             x_chopped.append(normalized_sample);
         else:  # if file is longer than n_frame, pad remainder
             remainder: Tensor = x[:, x.shape[-1] - x.shape[0] % max_frame:];
             if not remainder.shape[-1] <= self.len_thresh:
-                if not test:
-                    xi: Tensor = self.pad_fn(remainder, max_len=max_frame);
-                    assert xi.shape[-1] == max_frame, xi.shape;
-                else:
-                    xi: Tensor = remainder;
-                    assert xi.shape[-1] <= max_frame, xi.shape;
+                xi: Tensor = self.pad_fn(remainder, max_len=max_frame);
+                assert xi.shape[-1] == max_frame, xi.shape;
             normalized_sample: Tensor = self.normalize({"name": name, "feature": xi, "emotion": y})["feature"];
             x_chopped.append(normalized_sample);
 
         # pack to dict
         if test:
-            sample: Dict[str, Union[List[Tensor], Tensor]] = {"name": name, "feature": x_chopped, "emotion": y};
+            sample: Dict[str, Tensor] = {"name": name, "feature": x_chopped, "emotion": y};
         else:
-            sample: Dict[str, Tensor] = [{"name": name, "feature": xi, "emotion": y} for xi in x_chopped];
+            sample: List[Dict[str, Tensor]] = [{"name": name, "feature": xi, "emotion": y} for xi in x_chopped];
 
         return sample;
