@@ -108,7 +108,7 @@ class BaseDataLoader:
         with open(save_path, "wb") as f:
             pickle.dump([mean.to(torch.float32), std.to(torch.float32)], f);
 
-    def setup(self):
+    def setup(self) -> None:
         """
         Initialize train, val, test samples
         """
@@ -123,11 +123,7 @@ class BaseDataLoader:
                 print(f"Global statistics `{self.packer.stats_path}` does not exists. Creating one...");
                 self.compute_global_stats(self.packer.stats_path);
 
-    def prepare(self, frame_size: int, batch_size: int, num_workers: int = 1) -> Tuple[
-        DataLoader,
-        DataLoader,
-        DataLoader
-    ]:
+    def prepare_train(self, frame_size: float, batch_size: int, num_workers: int) -> DataLoader:
         # prepare train
         print("Preparing Training Samples");
         train_samples: List[Dict[str, Union[Tensor, str]]] = list();
@@ -135,22 +131,38 @@ class BaseDataLoader:
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample);
             train_samples += self.packer(feature, frame_size=frame_size);
 
+        train_dataloader: DataLoader = DataLoader(train_samples, batch_size=batch_size, num_workers=1, shuffle=True);
+        return train_dataloader;
+
+    def prepare_val(self, frame_size: float, num_workers: int) -> DataLoader:
         # prepare val
         print("Preparing Validation Samples");
         val_samples: List[Dict[str, Union[Tensor, str]]] = list();
         for sample in tqdm(self.val):
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample);
             val_samples.append(self.packer(feature, frame_size=frame_size, test=True));
-            
-        # prepare train
+
+        val_dataloader: DataLoader = DataLoader(val_samples, batch_size=1, num_workers=1);
+        return val_dataloader;
+
+    def prepare_test(self, frame_size: float, num_workers: int) -> DataLoader:
+        # prepare test
         print("Preparing Testing Samples");
         test_samples: List[Dict[str, Union[Tensor, str]]] = list();
         for sample in tqdm(self.test):
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample, test=True);
             test_samples.append(self.packer(feature, frame_size=frame_size, test=True));
-
-        train_dataloader: DataLoader = DataLoader(train_samples, batch_size=batch_size, num_workers=1, shuffle=True);
-        val_dataloader: DataLoader = DataLoader(val_samples, batch_size=1, num_workers=1);
+      
         test_dataloader: DataLoader = DataLoader(test_samples, batch_size=1, num_workers=1);
+        return test_dataloader;
 
+    def prepare(self, frame_size: float, batch_size: int, num_workers: int = 1) -> Tuple[
+        DataLoader,
+        DataLoader,
+        DataLoader
+    ]:
+        train_dataloader: DataLoader = self.prepare_train(frame_size=frame_size, batch_size=batch_size, num_workers=num_workers);
+        val_dataloader: DataLoader = self.prepare_val(frame_size=frame_size, num_workers=num_workers);
+        test_dataloader: DataLoader = self.prepare_test(frame_size=frame_size, num_workers=num_workers);    
+            
         return train_dataloader, val_dataloader, test_dataloader

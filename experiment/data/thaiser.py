@@ -16,6 +16,7 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
     def __init__(self, 
         agreement: float,
         fold: int = 0,
+        smoothing_param: float = 0.,
         train_mic: str = "con",
         test_mic: Optional[str] = None,
         include_fru: bool = False,
@@ -24,6 +25,8 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
         """
         Thai SER DataLoader constructor
         
+        agreement: float
+        float: int
         train_mic: str
         test_mic: str
         include_fru: bool
@@ -36,6 +39,7 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
         self.agreement: float = agreement;
         self.train_mic: str = train_mic;
         self.include_zoom: bool = include_zoom;
+        self.smoothing_param: float = smoothing_param;
 
         if include_fru:
             self.score_cols: List[str] = ["neutral_score", "angry_score", "happy_score", "sad_score", "frustrated_score"];
@@ -47,7 +51,7 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
         else:
             self.test_mic: str = test_mic;
 
-        fold_mapping: Dict[int, List[int]] = {
+        self.fold_mapping: Dict[int, List[int]] = {
             0: [list(range(1, 71)), list(range(71, 76)), list(range(76, 81))],
             1: [list(range(1, 61)) + list(range(71, 81)), list(range(61, 66)), list(range(66, 71))],
             2: [list(range(1, 51)) + list(range(61, 81)), list(range(51, 56)), list(range(56, 61))],
@@ -57,7 +61,7 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
             6: [list(range(1, 11)) + list(range(21, 81)), list(range(11, 16)), list(range(16, 21))],
             7: [list(range(11, 81)), list(range(1, 6)), list(range(6, 11))],
         };
-        self.train_studios, self.val_studios, self.test_studios = fold_mapping[self.fold];
+        self.train_studios, self.val_studios, self.test_studios = self.fold_mapping[self.fold];
 
     def set_fold(self, fold: int) -> None:
         self.fold = fold;
@@ -78,7 +82,14 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
         paths: np.ndarray = train["path"].values;
         
         self.train: List[Dict[str, Union[str, Tensor]]] = [
-            {"feature": f, "emotion": Tensor(e.astype(float) / e.astype(float).sum())} 
+            {
+                "feature": f, 
+                "emotion": (
+                    self.smoothing_param + Tensor(e.astype(float))
+                ).divide(
+                    self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
+                )
+            }
             for f, e in zip(paths, scores) 
             if e.astype(float).sum() != 0.
         ];
@@ -93,7 +104,14 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
         paths: np.ndarray = val["path"].values;
         
         self.val: List[Dict[str, Union[str, Tensor]]] = [
-            {"feature": f, "emotion": Tensor(e.astype(float) / e.astype(float).sum())} 
+            {
+                "feature": f, 
+                "emotion": (
+                    self.smoothing_param + Tensor(e.astype(float))
+                ).divide(
+                    self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
+                )
+            }
             for f, e in zip(paths, scores) 
             if e.astype(float).sum() != 0.
         ];
@@ -108,7 +126,14 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
         paths: np.ndarray = test["path"].values;
         
         self.test: List[Dict[str, Union[str, Tensor]]] = [
-            {"feature": f, "emotion": Tensor(e.astype(float) / e.astype(float).sum())} 
+            {
+                "feature": f, 
+                "emotion": (
+                    self.smoothing_param + Tensor(e.astype(float))
+                ).divide(
+                    self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
+                )
+            }
             for f, e in zip(paths, scores) 
             if e.astype(float).sum() != 0.
         ];
