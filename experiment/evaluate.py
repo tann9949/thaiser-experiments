@@ -14,6 +14,7 @@ class Evaluator:
         model: BaseModel):
         self.model: BaseModel = model;
 
+    # TODO: add WA, UA
     def __call__(self, test_loader: DataLoader) -> Dict[str, Tensor]:
         correct: List[Dict[str, Tensor]] = [
             self.model.test_step(batch, batch_idx)

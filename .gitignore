@@ -1,4 +1,5 @@
 dataset
+log
 venv
 **/.DS_store
 **/__pycache__

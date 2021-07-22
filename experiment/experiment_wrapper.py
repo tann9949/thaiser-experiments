@@ -74,7 +74,7 @@ class ExperimentWrapper:
             callbacks: List[Callback] = [
                 ModelCheckpoint(dirpath=f"{self.checkpoint_path}/{i}/", monitor="val_loss")
             ];
-            logger: TensorBoardLogger = TensorBoardLogger(save_dir=f"{self.checkpoint_path}", version=1, name="lightning_logs")
+            logger: TensorBoardLogger = TensorBoardLogger(save_dir=f"{self.checkpoint_path}/{i}", version=1, name="lightning_logs")
             trainer: pl.Trainer = pl.Trainer(**self.trainer_params, callbacks=callbacks, logger=logger);
 
             # train model using trainer
@@ -99,6 +99,8 @@ class ExperimentWrapper:
 
         # compute results statistics
         results_stats: Dict[str, Tensor] = {}
+        print("\n" + "-"*20);
+        print("Summary")
         print(f"-"*20);
         for metric in results:
             result: np.ndarray = np.array(results[metric]);
@@ -106,7 +108,7 @@ class ExperimentWrapper:
             metric_std: Tensor = result.std();
             results_stats[metric] = { "mean": metric_mean, "std": metric_std };
             
-            print(f"{metric}: {metric_mean:.4f} +- {metric_std:.4f}")
+            print(f"{metric}: {metric_mean:.4f} ± {metric_std:.4f}")
         print(f"-"*20);
         
         return {

@@ -15,11 +15,11 @@ class CNNLSTM(BaseModel):
         hparams,
         **kwargs):
         super().__init__(hparams, **kwargs);
-        in_channel: int = hparams.get("in_channel", 40)
+        in_channel: int = hparams.get("in_channel", 64)
         sequence_length: int = hparams.get("sequence_length", 300)
         n_channels: List[int] = hparams.get("n_channels", [64, 64, 128, 128])
         kernel_size: List[int] = hparams.get("kernel_size", [5, 3, 3, 3])
-        pool_size: List[int] = hparams.get("pool_size", [4, 2, 2, 2])
+        pool_size: List[int] = hparams.get("pool_size", [2, 2, 2, 2])
         lstm_unit: int = hparams.get("lstm_unit", 128)
         n_classes: int = hparams.get("n_classes", 4)
 

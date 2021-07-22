@@ -7,7 +7,7 @@ from torch import Tensor
 from .base_dataloader import BaseDataLoader
 
 
-class ThaiSERSoftLabelLoader(BaseDataLoader):
+class ThaiSERLoader(BaseDataLoader):
     """
     THAI SER DataLoader Module use to extract
     training, validation , and testing data
@@ -16,6 +16,7 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
     def __init__(self, 
         agreement: float,
         fold: int = 0,
+        use_soft_target: bool = True,
         smoothing_param: float = 0.,
         train_mic: str = "con",
         test_mic: Optional[str] = None,
@@ -40,6 +41,7 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
         self.train_mic: str = train_mic;
         self.include_zoom: bool = include_zoom;
         self.smoothing_param: float = smoothing_param;
+        self.use_soft_target: bool = use_soft_target;
 
         if include_fru:
             self.score_cols: List[str] = ["neutral_score", "angry_score", "happy_score", "sad_score", "frustrated_score"];
@@ -73,7 +75,7 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
         label = label[label["agreement"] > self.agreement];
         label = label[label["mic"] == self.train_mic];
         
-        train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)];
+        train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)].iloc[:100];  # FIXME:
 
         if self.include_zoom:
             train = pd.concat([train, zoom], axis=0).reset_index(drop=True);
@@ -81,125 +83,80 @@ class ThaiSERSoftLabelLoader(BaseDataLoader):
         scores: np.ndarray = train[self.score_cols].values.astype(float);
         paths: np.ndarray = train["path"].values;
         
-        self.train: List[Dict[str, Union[str, Tensor]]] = [
-            {
-                "feature": f, 
-                "emotion": (
-                    self.smoothing_param + Tensor(e.astype(float))
-                ).divide(
-                    self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
-                )
-            }
-            for f, e in zip(paths, scores) 
-            if e.astype(float).sum() != 0.
-        ];
+        if self.use_soft_target:
+            self.train: List[Dict[str, Union[str, Tensor]]] = [
+                {
+                    "feature": f, 
+                    "emotion": (
+                        self.smoothing_param + Tensor(e.astype(float))
+                    ).divide(
+                        self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
+                    )
+                }
+                for f, e in zip(paths, scores) 
+                if e.astype(float).sum() != 0.
+            ];
+        else:
+            self.train: List[Dict[str, Union[str, Tensor]]] = [
+                {"feature": f, "emotion": Tensor([1. if p == max(p) else 0. for p in e.astype(float)])} 
+                for f, e in zip(paths, scores) 
+                if e.astype(float).sum() != 0.
+            ];
         
     def setup_val(self):
         label: pd.DataFrame = self.label;
         label = label[label["agreement"] > self.agreement];
         label = label[label["mic"] == self.train_mic];
         
-        val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)];
+        val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)].iloc[:100];  # FIXME:
         scores: np.ndarray = val[self.score_cols].values.astype(float);
         paths: np.ndarray = val["path"].values;
         
-        self.val: List[Dict[str, Union[str, Tensor]]] = [
-            {
-                "feature": f, 
-                "emotion": (
-                    self.smoothing_param + Tensor(e.astype(float))
-                ).divide(
-                    self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
-                )
-            }
-            for f, e in zip(paths, scores) 
-            if e.astype(float).sum() != 0.
-        ];
+        if self.use_soft_target:
+            self.val: List[Dict[str, Union[str, Tensor]]] = [
+                {
+                    "feature": f, 
+                    "emotion": (
+                        self.smoothing_param + Tensor(e.astype(float))
+                    ).divide(
+                        self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
+                    )
+                }
+                for f, e in zip(paths, scores) 
+                if e.astype(float).sum() != 0.
+            ];
+        else:
+            self.val: List[Dict[str, Union[str, Tensor]]] = [
+                {"feature": f, "emotion": Tensor([1. if p == max(p) else 0. for p in e.astype(float)])} 
+                for f, e in zip(paths, scores) 
+                if e.astype(float).sum() != 0.
+            ];
         
     def setup_test(self):
         label: pd.DataFrame = self.label;
         label = label[label["agreement"] > self.agreement];
         label = label[label["mic"] == self.test_mic];
         
-        test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)];
+        test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)].iloc[:100];  # FIXME:
         scores: np.ndarray = test[self.score_cols].values.astype(float);
         paths: np.ndarray = test["path"].values;
         
-        self.test: List[Dict[str, Union[str, Tensor]]] = [
-            {
-                "feature": f, 
-                "emotion": (
-                    self.smoothing_param + Tensor(e.astype(float))
-                ).divide(
-                    self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
-                )
-            }
-            for f, e in zip(paths, scores) 
-            if e.astype(float).sum() != 0.
-        ];
-
-
-class ThaiSERHardLabelLoader(ThaiSERSoftLabelLoader):
-    """
-    THAI SER DataLoader Module use to extract
-    training, validation , and testing data.
-    Labels are formatted in hard label (e.g. [0., 1., 0., 0.])
-    """
-    def __init__(self,
-        **kwargs):
-        """
-        Thai SER DataLoader constructor
-        
-        train_mic: str
-        test_mic: str
-        include_fru: bool
-        label_path: str
-        featurizer: Feaurizer
-        packer:  FeaturePacker
-        """
-        super().__init__(**kwargs);      
-        
-    def setup_train(self):
-        label: pd.DataFrame = self.label;
-        label = label[label["agreement"] > self.agreement];
-        label = label[label["mic"] == self.train_mic];
-        
-        train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in range(1, 71))];
-        scores: np.ndarray = train[self.score_cols].values.astype(float);
-        paths: np.ndarray = train["path"].values;
-        
-        self.train: List[Dict[str, Union[str, Tensor]]] = [
-            {"feature": f, "emotion": Tensor([1. if p == max(p) else 0. for p in e.astype(float)])} 
-            for f, e in zip(paths, scores) 
-            if e.astype(float).sum() != 0.
-        ];
-        
-    def setup_val(self):
-        label: pd.DataFrame = self.label;
-        label = label[label["agreement"] > self.agreement];
-        label = label[label["mic"] == self.train_mic];
-        
-        val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in range(71, 76))];
-        scores: np.ndarray = val[self.score_cols].values.astype(float);
-        paths: np.ndarray = val["path"].values;
-        
-        self.val: List[Dict[str, Union[str, Tensor]]] = [
-            {"feature": f, "emotion": Tensor([1. if p == max(p) else 0. for p in e.astype(float)])} 
-            for f, e in zip(paths, scores) 
-            if e.astype(float).sum() != 0.
-        ];
-        
-    def setup_test(self):
-        label: pd.DataFrame = self.label;
-        label = label[label["agreement"] > self.agreement];
-        label = label[label["mic"] == self.test_mic];
-        
-        test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in range(76, 81))];
-        scores: np.ndarray = test[self.score_cols].values.astype(float);
-        paths: np.ndarray = test["path"].values;
-        
-        self.test: List[Dict[str, Union[str, Tensor]]] = [
-            {"feature": f, "emotion": Tensor([1. if p == max(p) else 0. for p in e.astype(float)])} 
-            for f, e in zip(paths, scores) 
-            if e.astype(float).sum() != 0.
-        ];
+        if self.use_soft_target:
+            self.test: List[Dict[str, Union[str, Tensor]]] = [
+                {
+                    "feature": f, 
+                    "emotion": (
+                        self.smoothing_param + Tensor(e.astype(float))
+                    ).divide(
+                        self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
+                    )
+                }
+                for f, e in zip(paths, scores) 
+                if e.astype(float).sum() != 0.
+            ];
+        else:
+            self.test: List[Dict[str, Union[str, Tensor]]] = [
+                {"feature": f, "emotion": Tensor([1. if p == max(p) else 0. for p in e.astype(float)])} 
+                for f, e in zip(paths, scores) 
+                if e.astype(float).sum() != 0.
+            ];

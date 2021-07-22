@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from .feature.feature_packer import FeaturePacker
 from .feature.featurizer import Featurizer
@@ -123,7 +123,7 @@ class BaseDataLoader:
                 print(f"Global statistics `{self.packer.stats_path}` does not exists. Creating one...");
                 self.compute_global_stats(self.packer.stats_path);
 
-    def prepare_train(self, frame_size: float, batch_size: int, num_workers: int) -> DataLoader:
+    def prepare_train(self, frame_size: float, batch_size: int) -> DataLoader:
         # prepare train
         print("Preparing Training Samples");
         train_samples: List[Dict[str, Union[Tensor, str]]] = list();
@@ -134,7 +134,7 @@ class BaseDataLoader:
         train_dataloader: DataLoader = DataLoader(train_samples, batch_size=batch_size, num_workers=1, shuffle=True);
         return train_dataloader;
 
-    def prepare_val(self, frame_size: float, num_workers: int) -> DataLoader:
+    def prepare_val(self, frame_size: float) -> DataLoader:
         # prepare val
         print("Preparing Validation Samples");
         val_samples: List[Dict[str, Union[Tensor, str]]] = list();
@@ -143,9 +143,10 @@ class BaseDataLoader:
             val_samples.append(self.packer(feature, frame_size=frame_size, test=True));
 
         val_dataloader: DataLoader = DataLoader(val_samples, batch_size=1, num_workers=1);
+
         return val_dataloader;
 
-    def prepare_test(self, frame_size: float, num_workers: int) -> DataLoader:
+    def prepare_test(self, frame_size: float) -> DataLoader:
         # prepare test
         print("Preparing Testing Samples");
         test_samples: List[Dict[str, Union[Tensor, str]]] = list();
@@ -156,13 +157,13 @@ class BaseDataLoader:
         test_dataloader: DataLoader = DataLoader(test_samples, batch_size=1, num_workers=1);
         return test_dataloader;
 
-    def prepare(self, frame_size: float, batch_size: int, num_workers: int = 1) -> Tuple[
+    def prepare(self, frame_size: float, batch_size: int) -> Tuple[
         DataLoader,
         DataLoader,
         DataLoader
     ]:
-        train_dataloader: DataLoader = self.prepare_train(frame_size=frame_size, batch_size=batch_size, num_workers=num_workers);
-        val_dataloader: DataLoader = self.prepare_val(frame_size=frame_size, num_workers=num_workers);
-        test_dataloader: DataLoader = self.prepare_test(frame_size=frame_size, num_workers=num_workers);    
+        train_dataloader: DataLoader = self.prepare_train(frame_size=frame_size, batch_size=batch_size);
+        val_dataloader: DataLoader = self.prepare_val(frame_size=frame_size);
+        test_dataloader: DataLoader = self.prepare_test(frame_size=frame_size);    
             
         return train_dataloader, val_dataloader, test_dataloader
