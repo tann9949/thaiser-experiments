@@ -94,7 +94,7 @@ class ExperimentWrapper:
             for metric in result.keys():
                 if metric not in results.keys():
                     results[metric] = [];
-                results[metric].append(result[metric].numpy());
+                results[metric].append(result[metric]);
                 print(f"{metric}: {result[metric]:.4f}");
 
         # compute results statistics
