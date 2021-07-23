@@ -98,7 +98,10 @@ class ThaiSERLoader(BaseDataLoader):
             ];
         else:
             self.train: List[Dict[str, Union[str, Tensor]]] = [
-                {"feature": f, "emotion": Tensor([1. if p == max(p) else 0. for p in e.astype(float)])} 
+                {
+                    "feature": f, 
+                    "emotion": Tensor([1. if p == max(e) else 0. for p in e.astype(float)])
+                } 
                 for f, e in zip(paths, scores) 
                 if e.astype(float).sum() != 0.
             ];
@@ -127,7 +130,10 @@ class ThaiSERLoader(BaseDataLoader):
             ];
         else:
             self.val: List[Dict[str, Union[str, Tensor]]] = [
-                {"feature": f, "emotion": Tensor([1. if p == max(p) else 0. for p in e.astype(float)])} 
+                {
+                    "feature": f, 
+                    "emotion": Tensor([1. if p == max(e) else 0. for p in e.astype(float)])
+                } 
                 for f, e in zip(paths, scores) 
                 if e.astype(float).sum() != 0.
             ];
@@ -156,7 +162,10 @@ class ThaiSERLoader(BaseDataLoader):
             ];
         else:
             self.test: List[Dict[str, Union[str, Tensor]]] = [
-                {"feature": f, "emotion": Tensor([1. if p == max(p) else 0. for p in e.astype(float)])} 
+                {
+                    "feature": f, 
+                    "emotion": Tensor([1. if p == max(e) else 0. for p in e.astype(float)])
+                } 
                 for f, e in zip(paths, scores) 
                 if e.astype(float).sum() != 0.
             ];

@@ -1,4 +1,5 @@
-from typing import Dict, Optional, Tuple, Any
+from typing import Dict, Optional, Tuple, Any, List
+import json
 import warnings
 import logging
 
@@ -19,7 +20,7 @@ label_path: str = "dataset/wav/THAISER/labels.csv";
 
 agreement: float = 0.71;
 smoothing_param: float = 0.;
-use_soft_target: bool = True;
+use_soft_target: bool = False;
 include_fru: bool = False;
 include_zoom: bool = False;
 train_mic: str = "con";
@@ -27,26 +28,27 @@ test_mic: Optional[str] = None;
     
 num_mel_bins: int = 40;
 max_len: int = 3
-frame_length: int = 25;
+frame_length: int = 50;
 frame_shift: int = 10;
 vtlp_range: Optional[Tuple[float, float]] = (0.9, 1.1);
 n_class: int = 5 if include_fru else 4;
 pad_mode: str = "dup";
-stats_path: Optional[str] = "stats.pckl";
+stats_path: Optional[str] = None; # "stats.pckl";
 
 hparams: Dict[str, Any] = {
     "in_channel": num_mel_bins,
     "sequence_length": int(max_len * (1000 / frame_shift)),
     "n_channels": [64, 64, 128, 128],
     "kernel_size": [5, 3, 3, 3],
-    "pool_size": [2, 2, 2, 2],
+    "pool_size": [4, 2, 2, 2],
     "lstm_unit": 128,
     "n_classes": n_class
 }
     
-batch_size: int = 16;
-max_epoch: int = 3;
-n_iteration: int = 2;
+batch_size: int = 64;
+max_epoch: int = 40;
+n_iteration: int = 25;
+gpus: Optional[List[int]] = [0];
 checkpoint_path: str = "log/cnnlstm_exp";
     
 
@@ -102,7 +104,8 @@ def main():
             trainer_params={
                 "max_epochs": max_epoch, 
                 "progress_bar_refresh_rate": 0,
-                "weights_summary": None
+                "weights_summary": None,
+                "gpus": gpus
             },
             train_dataloader=train_dataloader,
             val_dataloader=val_dataloader,
@@ -140,6 +143,9 @@ def main():
     print("All Folds Summary");
     print("*"*20);
     print(template);
+    
+    with open(f"{checkpoint_path}/exp_results.json", "w") as f:
+        json.dump(fold_stats, f, indent=4);
 
 
 if __name__ == "__main__":

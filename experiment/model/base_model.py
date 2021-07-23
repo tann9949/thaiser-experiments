@@ -23,6 +23,9 @@ class BaseModel(pl.LightningModule):
 
     def compute_metric(self, y_hat: Tensor, y: Tensor, *args, **kwargs) -> float:
         assert y_hat.shape[0] == y.shape[0];
+        if torch.cuda.is_available():
+            y_hat = y_hat.cuda();
+            y = y.cuda();
         return torch.sum(y_hat == y) / y_hat.shape[0];
 
     def training_step(self, batch: Dict[str, Any], batch_idx: int) -> float:
