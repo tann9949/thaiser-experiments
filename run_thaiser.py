@@ -49,7 +49,7 @@ batch_size: int = 64;
 max_epoch: int = 40;
 n_iteration: int = 25;
 gpus: Optional[List[int]] = [0];
-checkpoint_path: str = "log/cnnlstm_exp";
+exp_path: str = "log/cnnlstm_exp";
     
 
 def main():
@@ -111,7 +111,7 @@ def main():
             val_dataloader=val_dataloader,
             test_dataloader=test_dataloader,
             n_iteration=n_iteration,
-            checkpoint_path=checkpoint_path
+            checkpoint_path=f"{exp_path}/fold{fold}"
         );
 
         exp_results: Dict[str, Any] = wrapper.run();
@@ -144,7 +144,7 @@ def main():
     print("*"*20);
     print(template);
     
-    with open(f"{checkpoint_path}/exp_results.json", "w") as f:
+    with open(f"{exp_path}/exp_results.json", "w") as f:
         json.dump(fold_stats, f, indent=4);
 
 

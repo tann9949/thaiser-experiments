@@ -113,5 +113,5 @@ class ExperimentWrapper:
         
         return {
             "statistics": results_stats,
-            "experiment_results": {k: np.array(v) for k, v in results.items()}
+            "experiment_results": {k: np.array(v).tolist() for k, v in results.items()}
         };

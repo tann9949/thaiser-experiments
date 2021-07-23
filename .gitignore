@@ -1,4 +1,5 @@
 dataset
+mlp_exp
 log
 venv
 **/.DS_store
@@ -6,3 +7,4 @@ venv
 **/*.ipynb*
 **/*.pckl
 **/lightning_logs
+LINE_TOKEN.txt
