@@ -163,6 +163,13 @@ def preprocess_THAISER(raw_path: str, n_workers: Optional[int] = None) -> None:
     """
     Preprocess THAISER directory. Get emotion as soft label and
     format all audios into 16k sampling rate and format labels
+
+    Arguments
+    ---------
+    raw_path: str
+        Path to directory of raw data
+    n_workers: Optional[int]
+        Number of workers to run process. If not specified, will use all cpu avaliable
     """
     if n_workers is None:
         n_workers: int = mp.cpu_count();

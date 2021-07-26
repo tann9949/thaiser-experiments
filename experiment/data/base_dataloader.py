@@ -105,6 +105,8 @@ class BaseDataLoader:
         std: Tensor = torch.sqrt(sum_x2 / N - mean.square());
 
         print("Finish calculating stats!")
+        if not os.path.exists(os.path.dirname(save_path)):
+            os.makedirs(os.path.dirname(save_path));
         with open(save_path, "wb") as f:
             pickle.dump([mean.to(torch.float32), std.to(torch.float32)], f);
 
@@ -121,6 +123,11 @@ class BaseDataLoader:
         if self.packer.stats_path is not None:
             if not os.path.exists(self.packer.stats_path):
                 print(f"Global statistics `{self.packer.stats_path}` does not exists. Creating one...");
+                self.compute_global_stats(self.packer.stats_path);
+            else:
+                # remove if exists to make it robust for different fold
+                print(f"Global statistics `{self.packer.stats_path}` exists. Recomputing statistics...");
+                os.remove(self.packer.stats_path);
                 self.compute_global_stats(self.packer.stats_path);
 
     def prepare_train(self, frame_size: float, batch_size: int) -> DataLoader:

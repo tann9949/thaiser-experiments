@@ -1,6 +1,7 @@
 from argparse import ArgumentParser, Namespace
 
 from thaiser import preprocess_THAISER
+from iemocap import preprocess_IEMOCAP
 
 
 def run_parser() -> Namespace:
@@ -25,8 +26,8 @@ def main(args: Namespace) -> None:
 
     # process listed dataset
     preprocess_THAISER(raw_path=raw_path, n_workers=n_workers);  # preprocess THAI SER
+    preprocess_IEMOCAP(raw_path);
     # TODO:
-    # preprocess_IEMOCAP(raw_path);
     # preprocess_EmoDB(raw_path);
     # preprocess_EMOVO(raw_path);
 
