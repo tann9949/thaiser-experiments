@@ -61,18 +61,20 @@ def generate_emovo_label(raw_path: str) -> pd.DataFrame:
     # init variables
     wav_root: str = raw_path.replace("/raw", "/wav");  # path to wav dir
     label_path: str = f"{wav_root}/EMOVO/labels.csv";
-    columns: List[str] = ["name", "path", "emotion"];  # columns of labels.csv
+    columns: List[str] = ["name", "path", "emotion"] + [e+"_score" for e in EMOTION_MAPPING.values()];  # columns of labels.csv
     
     # creating dataframe
     labels: List[List[Any]] = [];
     for wav in glob(f"{wav_root}/EMOVO/**/*.wav", recursive=True):  # ite
+        score: Dict[str, int] = { e+"_score": 0 for e in EMOTION_MAPPING.values() };
         name: str = remove_extension(os.path.basename(wav));
         f_path: str = get_full_path(wav_root, name);
         emo_key: str = name.split("-")[0];
         if emo_key not in EMOTION_MAPPING.keys():
             raise NameError(f"Invalid emo_key `{emo_key}` from `{name}` from file name `{wav}`");
         emotion: str = EMOTION_MAPPING[emo_key];
-        labels.append([name, f_path, emotion])
+        score[emotion+"_score"] += 1;
+        labels.append([name, f_path, emotion] + list(score.values()));
     labels: pd.DataFrame = pd.DataFrame(labels, columns=columns);
     
     # save (overwrite if exists)

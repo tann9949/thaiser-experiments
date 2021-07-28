@@ -20,6 +20,13 @@ EMOTION_MAPPING: Dict[str, str] = {
     "dis": "disgust"
 };
 
+DOMINANT_MAPPING: Dict[str, str] = {
+    "anger": "angry",
+    "sadness": "sad",
+    "happiness": "happy",
+    "frustration": "frustrated"
+}
+
 
 def get_full_iemocap_path(wav_root: str, name: str) -> str:
     """
@@ -88,14 +95,18 @@ def read_iemocap_text(wav_root: str, text: str) -> List[Any]:
             dominant_emotion: str = line.split("\t")[2].strip().lower();
             if dominant_emotion in EMOTION_MAPPING.keys():
                 dominant_emotion = EMOTION_MAPPING[dominant_emotion];
+                if dominant_emotion in DOMINANT_MAPPING.keys():
+                    dominant_emotion = DOMINANT_MAPPING[dominant_emotion];
         elif line[:3] == "C-E":  # get categorical emotion, ignore self-eval
-            emotions: str = [e for e in line.split("\t")[1].split(";") if e != ""];  # get emotion chunk
+            emotions: str = [e for e in line.split("\t")[1].split(";") if e != ""];  # get emotion voted for each speakers
             for emotion in emotions:
-                score[emotion.lower().strip()] += 1 / len(emotions);
-            path: str = get_full_iemocap_path(wav_root, f_name);
-            sample: List[Any] = [f_name, path, dominant_emotion] + list(score.values());
-            data.append(sample);
+                score[emotion.lower().strip()] += 1 / len(emotions);  # convert to score, normalized by # votes
         elif line[0] == "A":
+            # append to labels
+            if f_name is not None:
+                path: str = get_full_iemocap_path(wav_root, f_name);
+                sample: List[Any] = [f_name, path, dominant_emotion] + list(score.values());
+                data.append(sample);
             # reset, we ignore continuous emotion anyway
             f_name = None;
             dominant_emotion = None;
@@ -127,9 +138,9 @@ def generate_iemocap_label(raw_path: str) -> pd.DataFrame:
     wav_root: str = raw_path.replace("/raw", "/wav");  # path to wav dir
     label_path: str = f"{wav_root}/IEMOCAP_full_release/labels.csv";
     columns: List[str] = [
-        "name", "path", "dominant_emotion", "angry", "happy", 
-        "excited", "sad", "frustrated", "fear", "surprise", 
-        "other", "neutral", "disgust"];  # columns of labels.csv
+        "name", "path", "dominant_emotion", "angry_score", "happy_score", 
+        "excited_score", "sad_score", "frustrated_score", "fear_score", "surprise_score", 
+        "other_score", "neutral_score", "disgust_score"];  # columns of labels.csv
     
     # creating dataframe
     labels: List[List[Any]] = [];

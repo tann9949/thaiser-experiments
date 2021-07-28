@@ -57,18 +57,20 @@ def generate_emodb_label(raw_path: str) -> pd.DataFrame:
     # init variables
     wav_root: str = raw_path.replace("/raw", "/wav");  # path to wav dir
     label_path: str = f"{wav_root}/emodb/labels.csv";
-    columns: List[str] = ["name", "path", "emotion"];  # columns of labels.csv
+    columns: List[str] = ["name", "path", "emotion"] + [e + "_score" for e in EMOTION_MAPPING.values()];  # columns of labels.csv
     
     # creating dataframe
     labels: List[List[Any]] = [];
     for wav in glob(f"{wav_root}/emodb/wav/*.wav"):  # ite
+        emo_score: Dict[str, int] = {e + "_score": 0 for e in EMOTION_MAPPING.values()}
         name: str = remove_extension(os.path.basename(wav));
         emo_key: str = name[-2];
         if emo_key not in EMOTION_MAPPING.keys():
             raise NameError(f"Invalid emo_key `{emo_key}` from `{name}` from file name `{wav}`");
         emotion: str = EMOTION_MAPPING[emo_key];
+        emo_score[emotion+"_score"] += 1;
         f_path: str = get_full_path(wav_root, name);
-        labels.append([name, f_path, emotion])
+        labels.append([name, f_path, emotion] + list(emo_score.values()));
     labels: pd.DataFrame = pd.DataFrame(labels, columns=columns);
     
     # save (overwrite if exists)
