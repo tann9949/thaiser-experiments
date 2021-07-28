@@ -9,14 +9,13 @@ data:
     include_fru: False
     include_zoom: False
     train_mic: con
-    test_zoom: True
     cross_corpus:
       iemocap: dataset/wav/IEMOCAP_full_release/labels.csv
       emodb: dataset/wav/emodb/labels.csv
       emovo: dataset/wav/EMOVO/labels.csv
 
 featurizer:
-  feat_type: fbank
+  feature_type: fbank
   feature_param:
     num_mel_bins: &n_mel 40
     frame_length: 50
@@ -44,6 +43,6 @@ train:
   trainer_param:
     progress_bar_refresh_rate: 0  # disable logging
     weights_summary: null  # disable logging
-    max_epoch: 40
+    max_epochs: 40
     gpus: null
     

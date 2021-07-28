@@ -9,3 +9,4 @@ venv
 **/lightning_logs
 LINE_TOKEN.txt
 **/.vscode
+config/test.yaml

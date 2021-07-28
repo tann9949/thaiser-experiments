@@ -13,7 +13,7 @@ from experiment.data.feature.featurizer import Featurizer
 from experiment.data.thaiser import ThaiSERLoader
 from experiment.experiment_wrapper import ExperimentWrapper
 from experiment.model.cnnlstm import CNNLSTM
-from experiment.utils import read_config
+from experiment.utils import notify_line, read_config
 
 warnings.filterwarnings("ignore")
 pl.utilities.distributed.log.setLevel(logging.ERROR)
@@ -57,7 +57,11 @@ def main(args: Namespace) -> None:
         print(f"Running Fold {fold}");
         print("*"*20);
 
-        dataloader: ThaiSERLoader = ThaiSERLoader(**config["dataloader"]);
+        dataloader: ThaiSERLoader = ThaiSERLoader(
+            featurizer=featurizer,
+            packer=packer,
+            **config["dataloader"]
+        );
 
         # prepare train, val data loaders
         dataloader.setup();
@@ -95,6 +99,7 @@ def main(args: Namespace) -> None:
                         "EMOVO": dataloader.prepare_emovo(frame_size=frame_size),
                     }
 
+        # define training setting
         wrapper: ExperimentWrapper = ExperimentWrapper(
             ModelClass=CNNLSTM,
             hparams=config["model_hparams"],
@@ -105,8 +110,7 @@ def main(args: Namespace) -> None:
             n_iteration=n_iteration,
             checkpoint_path=f"{exp_path}/fold{fold}"
         );
-
-        exp_results: Dict[str, Any] = wrapper.run();
+        exp_results: Dict[str, Any] = wrapper.run();   # start training !
         fold_stats[fold] = exp_results;
 
     # print results
@@ -158,6 +162,9 @@ def main(args: Namespace) -> None:
     # save experiment results
     with open(f"{exp_path}/exp_results.json", "w") as f:
         json.dump(fold_stats, f, indent=4);
+
+    # notify line
+    notify_line(template);
 
 
 if __name__ == "__main__":
