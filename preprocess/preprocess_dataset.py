@@ -2,6 +2,8 @@ from argparse import ArgumentParser, Namespace
 
 from thaiser import preprocess_THAISER
 from iemocap import preprocess_IEMOCAP
+from emodb import preprocess_EmoDB
+from emovo import preprocess_EMOVO
 
 
 def run_parser() -> Namespace:
@@ -25,11 +27,22 @@ def main(args: Namespace) -> None:
     n_workers: int = args.n_workers
 
     # process listed dataset
+    print("-"*20);
+    print("Processing THAI SER...");
+    print("-"*20);
     preprocess_THAISER(raw_path=raw_path, n_workers=n_workers);  # preprocess THAI SER
-    preprocess_IEMOCAP(raw_path);
-    # TODO:
-    # preprocess_EmoDB(raw_path);
-    # preprocess_EMOVO(raw_path);
+    print("-"*20);
+    print("Processing IEMOCAP...");
+    print("-"*20);
+    preprocess_IEMOCAP(raw_path=raw_path, n_workers=n_workers);
+    print("-"*20);
+    print("Processing EmoDB...");
+    print("-"*20);
+    preprocess_EmoDB(raw_path=raw_path, n_workers=n_workers);
+    print("-"*20);
+    print("Processing EMOVO...");
+    print("-"*20);
+    preprocess_EMOVO(raw_path=raw_path, n_workers=n_workers);
 
 
 if __name__ == "__main__":

@@ -194,9 +194,9 @@ def preprocess_THAISER(raw_path: str, n_workers: Optional[int] = None) -> None:
     inp: str = input();
     if inp.strip().lower() == "y":
         os.removedirs(thaiser_root);
-        print(f"Directory `{thaiser_root}` deleted")
+        print(f"Directory `{thaiser_root}` deleted");
     else:
-        print(f"Directory `{thaiser_root}` kept")
+        print(f"Directory `{thaiser_root}` kept");
     
     # generate dataset label
     label_path: str = f"{wav_root}/labels.csv"
