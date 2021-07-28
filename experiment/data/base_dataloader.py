@@ -117,7 +117,6 @@ class BaseDataLoader:
         # setup train, val, test
         self.setup_train();
         self.setup_val();
-        self.setup_test();
 
         # compute global stats if necessary
         if self.packer.stats_path is not None:
@@ -153,24 +152,11 @@ class BaseDataLoader:
 
         return val_dataloader;
 
-    def prepare_test(self, frame_size: float) -> DataLoader:
-        # prepare test
-        print("Preparing Testing Samples");
-        test_samples: List[Dict[str, Union[Tensor, str]]] = list();
-        for sample in tqdm(self.test):
-            feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample, test=True);
-            test_samples.append(self.packer(feature, frame_size=frame_size, test=True));
-      
-        test_dataloader: DataLoader = DataLoader(test_samples, batch_size=1, num_workers=0);
-        return test_dataloader;
-
     def prepare(self, frame_size: float, batch_size: int) -> Tuple[
-        DataLoader,
         DataLoader,
         DataLoader
     ]:
         train_dataloader: DataLoader = self.prepare_train(frame_size=frame_size, batch_size=batch_size);
         val_dataloader: DataLoader = self.prepare_val(frame_size=frame_size);
-        test_dataloader: DataLoader = self.prepare_test(frame_size=frame_size);    
             
-        return train_dataloader, val_dataloader, test_dataloader
+        return train_dataloader, val_dataloader

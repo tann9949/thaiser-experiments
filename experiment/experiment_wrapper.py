@@ -103,36 +103,30 @@ class ExperimentWrapper:
 
             # evaluate and stored in results list
             evaluator: Evaluator = Evaluator(model);
-            for test_name, test_dl in self.test_dataloader.items():
+            for test_name, test_dl in self.test_dataloader.items():  # iterate over test loaders
                 if test_name not in results.keys():
-                    results[test_name] = {}
+                    results[test_name] = {"experiment_results": {}, "statistics": {}}
                 result: Dict[str, Tensor] = evaluator(test_dl);
 
-                for metric in result.keys():
-                    if metric not in results[test_name].keys():
-                        results[test_name][metric] = [];
-                    results[test_name][metric].append(result[metric]);
+                for metric in result.keys():  # iterate over
+                    if metric not in results[test_name]["experiment_results"].keys():
+                        results[test_name]["experiment_results"][metric] = [];
+                    results[test_name]["experiment_results"][metric].append(result[metric]);
                     print(f"[{test_name}]\t{metric}: {result[metric]:.4f}");
 
         # compute results statistics
-        results_stats: Dict[str, Tensor] = {};  # dict of name and its stats
         print("\n" + "-"*20);
         print("Summary");
         print(f"-"*20);
-        for name in results:
-            if name not in results_stats:
-                results_stats[name] = {};
+        for name in results:  # iterate over test loaders
             print("*"*5, name, "*"*5);
-            for metric in results[name]:
-                result: np.ndarray = np.array(results[name][metric]);
+            for metric in results[name]["experiment_results"]:  # iterate over metric
+                result: np.ndarray = np.array(results[name]["experiment_results"][metric]);
                 metric_mean: Tensor = result.mean();
                 metric_std: Tensor = result.std();
-                results_stats[name][metric] = { "mean": metric_mean, "std": metric_std };
+                results[name]["statistics"][metric] = { "mean": metric_mean, "std": metric_std };
             
                 print(f"{metric}: {metric_mean:.4f} ± {metric_std:.4f}")
         print(f"-"*20);
         
-        return {
-            "statistics": results_stats,
-            "experiment_results": {k: np.array(v).tolist() for k, v in results.items()}
-        };
+        return results;
