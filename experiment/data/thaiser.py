@@ -77,8 +77,8 @@ class ThaiSERLoader(BaseDataLoader):
             zoom: pd.DataFrame = label[label["mic"] == "mic"];
         label = label[label["mic"] == self.train_mic];
         
-        # train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)];
-        train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)].iloc[:50];
+        train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)];
+        # train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)].iloc[:50];
 
         if self.include_zoom:
             train = pd.concat([train, zoom], axis=0).reset_index(drop=True);
@@ -114,8 +114,8 @@ class ThaiSERLoader(BaseDataLoader):
         label = label[label["agreement"] > self.agreement];
         label = label[label["mic"] == self.train_mic];
         
-        # val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)];
-        val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)].iloc[:50];
+        val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)];
+        # val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)].iloc[:50];
         scores: np.ndarray = val[self.score_cols].values.astype(float);
         paths: np.ndarray = val["path"].values;
         
@@ -147,8 +147,8 @@ class ThaiSERLoader(BaseDataLoader):
         label = label[label["agreement"] > self.agreement];
         label = label[label["mic"] == self.test_mic];
         
-        # test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)];
-        test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)].iloc[:50];
+        test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)];
+        # test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)].iloc[:50];
         scores: np.ndarray = test[self.score_cols].values.astype(float);
         paths: np.ndarray = test["path"].values;
         
@@ -181,8 +181,8 @@ class ThaiSERLoader(BaseDataLoader):
 
         label: pd.DataFrame = self.label;  # load label
         label = label[label["agreement"] > self.agreement];  # filter agreement
-        # zoom: pd.DataFrame = label[label["mic"] == "mic"];  # select zoom item
-        zoom: pd.DataFrame = label[label["mic"] == "mic"].iloc[:50];  # select zoom item
+        zoom: pd.DataFrame = label[label["mic"] == "mic"];  # select zoom item
+        # zoom: pd.DataFrame = label[label["mic"] == "mic"].iloc[:50];  # select zoom item
         
         # get scores and file path
         scores: np.ndarray = zoom[self.score_cols].values.astype(float);

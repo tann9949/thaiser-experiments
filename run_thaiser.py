@@ -103,6 +103,7 @@ def main():
         train_dataloader, val_dataloader, test_dataloader = dataloader.prepare(frame_size=frame_shift/1000, batch_size=batch_size);
         if not include_zoom:
             zoom_dataloader: DataLoader = dataloader.prepare_zoom(frame_size=frame_shift/1000);
+            test_dataloader: Dict[str, DataLoader] = {"TEST": test_dataloader, "ZOOM": zoom_dataloader};
 
         wrapper: ExperimentWrapper = ExperimentWrapper(
             ModelClass=CNNLSTM,
