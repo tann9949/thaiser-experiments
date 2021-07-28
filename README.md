@@ -13,7 +13,7 @@ Before you can run any experiment, it is important to download dataset first. Th
 1. [THAI SER](https://github.com/vistec-AI/dataset-releases/releases/tag/v1) - Thai Speech Emotion Recognition Dataset form VISTEC.
 2. [IEMOCAP](https://sail.usc.edu/iemocap/iemocap_release.htm) - The Interactive Emotional Dyadic Motion Capture (IEMOCAP), an English Speech Emotion Recognition Dataset.
 3. [Emo-DB](http://www.emodb.bilderbar.info/download/) - Berlin Database of Emotional Speech, a German Speech Emotion Recognition Dataset.
-4. [EMOVO]()
+4. [EMOVO](http://voice.fub.it/activities/corpora/emovo/index.html) - EMOVO Corpus: an Italian Emotional Speech Database.
 
 Click on the dataset for a download link. For IEMOCAP dataset, user need to submit his/her email to request for dataset permission.
 
@@ -30,9 +30,9 @@ Once all dataset are downloaded, place the directory as follows:
 |       |- IEMOCAP_full_release
 |       |   |- ...
 |       |- emodb
-|       |   |- ...
+|       |   |- ... <unzipped-emodb-directory>
 |       |- EMOVO
-|           |- ...
+|           |- ...<unzipped-emovo-directory>
 ```
 
 Then, to preprocess all data and generate label csv file, run the following command:
