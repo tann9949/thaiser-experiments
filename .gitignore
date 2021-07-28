@@ -8,3 +8,4 @@ venv
 **/*.pckl
 **/lightning_logs
 LINE_TOKEN.txt
+**/.vscode

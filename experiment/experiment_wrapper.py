@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import pytorch_lightning as pl
@@ -24,7 +24,7 @@ class ExperimentWrapper:
         trainer_params: Dict[str, Any],
         train_dataloader: DataLoader,
         val_dataloader: DataLoader,
-        test_dataloader: DataLoader,
+        test_dataloader: Union[DataLoader, Dict[str, DataLoader]],
         n_iteration: int,
         checkpoint_path: str):
         """
@@ -37,16 +37,30 @@ class ExperimentWrapper:
             "emotion": <target-emotion-vector>
         }
 
+        ModelClass: BaseModel
+            A class instantiator that inherited from BaseModel class. 
+            Use to instantiate model for training
+        hparams: Dict[str, Any]
+            Hyperparameters of ModelClass when instantiating
+        trainer_params: Dict[str, Any]
+            Keyword arguments of pytorch lightning's Trainer 
+            (see more at https://pytorch-lightning.readthedocs.io/en/latest/api/pytorch_lightning.trainer.trainer.html)
         train_dataloader: DataLoader
             Data loader of training data
         val_dataloader: DataLoader
             Data loader of validation data
-        test_dataloader: DataLoader
-            Data loader of testing data
+        test_dataloader: Union[DataLoader, List[DataLoader]]
+            Data loader of testing data. Can be either a DataLoader of List of DataLoader.
+            If List of Data Loader is parsed, all test dataloader will be use as an evaluation set
+        n_iteration : int
+            Number of training iteration to be done
+        checkpoint_path: str
+            Path to model checkpoints
+        extra_dataloader
         """
         self.train_dataloader: DataLoader = train_dataloader;
         self.val_dataloader: DataLoader = val_dataloader;
-        self.test_dataloader: DataLoader = test_dataloader;
+        self.test_dataloader: Dict[str, DataLoader] = test_dataloader if isinstance(test_dataloader, dict) else {"TEST": test_dataloader};
         self.n_iteration: int = n_iteration;
 
         self.ModelClass: BaseModel = ModelClass;
@@ -89,26 +103,33 @@ class ExperimentWrapper:
 
             # evaluate and stored in results list
             evaluator: Evaluator = Evaluator(model);
-            result: Dict[str, Tensor] = evaluator(self.test_dataloader);
+            for test_name, test_dl in self.test_dataloader.items():
+                if test_name not in results.keys():
+                    results[test_name] = {}
+                result: Dict[str, Tensor] = evaluator(test_dl);
 
-            for metric in result.keys():
-                if metric not in results.keys():
-                    results[metric] = [];
-                results[metric].append(result[metric]);
-                print(f"{metric}: {result[metric]:.4f}");
+                for metric in result.keys():
+                    if metric not in results[test_name].keys():
+                        results[test_name][metric] = [];
+                    results[test_name][metric].append(result[metric]);
+                    print(f"[{test_name}]\t{metric}: {result[metric]:.4f}");
 
         # compute results statistics
-        results_stats: Dict[str, Tensor] = {}
+        results_stats: Dict[str, Tensor] = {};  # dict of name and its stats
         print("\n" + "-"*20);
-        print("Summary")
+        print("Summary");
         print(f"-"*20);
-        for metric in results:
-            result: np.ndarray = np.array(results[metric]);
-            metric_mean: Tensor = result.mean();
-            metric_std: Tensor = result.std();
-            results_stats[metric] = { "mean": metric_mean, "std": metric_std };
+        for name in results:
+            if name not in results_stats:
+                results_stats[name] = {};
+            print("*"*5, name, "*"*5);
+            for metric in results[name]:
+                result: np.ndarray = np.array(results[name][metric]);
+                metric_mean: Tensor = result.mean();
+                metric_std: Tensor = result.std();
+                results_stats[name][metric] = { "mean": metric_mean, "std": metric_std };
             
-            print(f"{metric}: {metric_mean:.4f} ± {metric_std:.4f}")
+                print(f"{metric}: {metric_mean:.4f} ± {metric_std:.4f}")
         print(f"-"*20);
         
         return {

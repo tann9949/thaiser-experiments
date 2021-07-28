@@ -4,6 +4,7 @@ import warnings
 import logging
 
 import pytorch_lightning as pl
+from torch.utils.data import DataLoader
 
 from experiment.experiment_wrapper import ExperimentWrapper
 from experiment.data.feature.feature_packer import FeaturePacker
@@ -46,9 +47,12 @@ hparams: Dict[str, Any] = {
 }
     
 batch_size: int = 64;
-max_epoch: int = 40;
-n_iteration: int = 25;
-gpus: Optional[List[int]] = [0];
+max_epoch: int = 2;
+# max_epoch: int = 40;
+n_iteration: int = 2;
+# n_iteration: int = 25;
+gpus: Optional[List[int]] = None;
+# gpus: Optional[List[int]] = [0]; 
 exp_path: str = "log/cnnlstm_exp";
     
 
@@ -97,6 +101,8 @@ def main():
 
         dataloader.setup();
         train_dataloader, val_dataloader, test_dataloader = dataloader.prepare(frame_size=frame_shift/1000, batch_size=batch_size);
+        if not include_zoom:
+            zoom_dataloader: DataLoader = dataloader.prepare_zoom(frame_size=frame_shift/1000);
 
         wrapper: ExperimentWrapper = ExperimentWrapper(
             ModelClass=CNNLSTM,
@@ -118,31 +124,46 @@ def main():
         fold_stats[fold] = exp_results;
 
     # print results
-    template: str = "fold\t\t"+"\t\t".join(fold_stats[0]["statistics"].keys())+"\n";
-        
-    avgs: Dict[str, Any] = {metric: [] for metric in fold_stats[0]["statistics"].keys()}
-    for f, result in fold_stats.items():
-        line: str = f"{f}\t\t";
-        for metric, value in result["statistics"].items():
-            line += f"{value['mean']:.4f}±{value['std']:.4f}\t\t";
-            avgs[metric].append(value["mean"]);
-        template += f"{line}\n"
+    metrics: List[str] = list(list(fold_stats[0]["statistics"].values())[0].keys())
+    names: List[str] = list(fold_stats[0]["statistics"].keys());
+    template: str = "fold\t\t"+"\t\t".join(metrics)+"\n";
+
+    avgs: Dict[str, Any] = {name: {metric: [] for metric in metrics} for name in names};
+    for f, result in fold_stats.items(): # iterate over fold
+        for i, (name, name_data) in enumerate(result["statistics"].items()):  # iterate over test
+            line = "";
+            if i == 0:
+                line += f"{f} - ({name})\t\t";
+            else:
+                line += f"  - ({name})\t\t";
+            for metric, value in name_data.items():  # iterate over metric
+                line += f"{value['mean']:.4f}±{value['std']:.4f}\t\t";
+                avgs[name][metric].append(value["mean"]);
+            template += f"{line}\n"
     template += "\n"
 
-    avgs = {k: sum(v)/len(v) for k, v in avgs.items()};
-    fold_stats["summary"] = avgs;
+    aggregated_result: Dict[str, float] = {
+        test_name: {
+            k: sum(v)/len(v) 
+            for k, v in test_result.items()
+        } for test_name, test_result in avgs.items()
+    };
+    fold_stats["summary"] = aggregated_result;
 
-    line: str = "Avg";
-    for i, (metric, values) in enumerate(avgs.items()):
-        indent: str = "\t\t" if i == 0 else "\t\t\t"
-        line += f"{indent}{values:.4f}";
-    template += line
+
+    for test_name, test_result in aggregated_result.items():
+        template += f"\n**** {test_name} ****\n"
+        line: str = "Avg";
+        for i, (metric, values) in enumerate(test_result.items()):
+            indent: str = "\t\t" if i == 0 else "\t\t\t";
+            line += f"{indent}{values:.4f}";
+        template += line
 
     print("");
     print("*"*20);
     print("All Folds Summary");
     print("*"*20);
-    print(template);
+    print(template)
     
     with open(f"{exp_path}/exp_results.json", "w") as f:
         json.dump(fold_stats, f, indent=4);

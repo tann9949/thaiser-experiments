@@ -3,6 +3,8 @@ from typing import Dict, List, Union, Optional
 import numpy as np
 import pandas as pd
 from torch import Tensor
+from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
 
 from .base_dataloader import BaseDataLoader
 
@@ -68,14 +70,15 @@ class ThaiSERLoader(BaseDataLoader):
     def set_fold(self, fold: int) -> None:
         self.fold = fold;
         
-    def setup_train(self):
+    def setup_train(self) -> None:
         label: pd.DataFrame = self.label;
-        if self.include_zoom:
-            zoom: pd.DataFrame = self.label[self.label["mic"] == "mic"]
         label = label[label["agreement"] > self.agreement];
+        if self.include_zoom:
+            zoom: pd.DataFrame = label[label["mic"] == "mic"];
         label = label[label["mic"] == self.train_mic];
         
-        train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)];
+        # train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)];
+        train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)].iloc[:50];
 
         if self.include_zoom:
             train = pd.concat([train, zoom], axis=0).reset_index(drop=True);
@@ -106,12 +109,13 @@ class ThaiSERLoader(BaseDataLoader):
                 if e.astype(float).sum() != 0.
             ];
         
-    def setup_val(self):
+    def setup_val(self) -> None:
         label: pd.DataFrame = self.label;
         label = label[label["agreement"] > self.agreement];
         label = label[label["mic"] == self.train_mic];
         
-        val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)];
+        # val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)];
+        val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)].iloc[:50];
         scores: np.ndarray = val[self.score_cols].values.astype(float);
         paths: np.ndarray = val["path"].values;
         
@@ -138,12 +142,13 @@ class ThaiSERLoader(BaseDataLoader):
                 if e.astype(float).sum() != 0.
             ];
         
-    def setup_test(self):
+    def setup_test(self) -> None:
         label: pd.DataFrame = self.label;
         label = label[label["agreement"] > self.agreement];
         label = label[label["mic"] == self.test_mic];
         
-        test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)];
+        # test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)];
+        test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)].iloc[:50];
         scores: np.ndarray = test[self.score_cols].values.astype(float);
         paths: np.ndarray = test["path"].values;
         
@@ -169,3 +174,49 @@ class ThaiSERLoader(BaseDataLoader):
                 for f, e in zip(paths, scores) 
                 if e.astype(float).sum() != 0.
             ];
+
+    def prepare_zoom(self, frame_size: float) -> DataLoader:
+        if self.include_zoom == True:
+            raise ValueError(f"Cannot setup zoom as test fold when it is included in training data");
+
+        label: pd.DataFrame = self.label;  # load label
+        label = label[label["agreement"] > self.agreement];  # filter agreement
+        # zoom: pd.DataFrame = label[label["mic"] == "mic"];  # select zoom item
+        zoom: pd.DataFrame = label[label["mic"] == "mic"].iloc[:50];  # select zoom item
+        
+        # get scores and file path
+        scores: np.ndarray = zoom[self.score_cols].values.astype(float);
+        paths: np.ndarray = zoom["path"].values;
+        
+        if self.use_soft_target:
+            zoom: List[Dict[str, Union[str, Tensor]]] = [
+                {
+                    "feature": f, 
+                    "emotion": (
+                        self.smoothing_param + Tensor(e.astype(float))
+                    ).divide(
+                        self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
+                    )
+                }
+                for f, e in zip(paths, scores) 
+                if e.astype(float).sum() != 0.
+            ];
+        else:
+            zoom: List[Dict[str, Union[str, Tensor]]] = [
+                {
+                    "feature": f, 
+                    "emotion": Tensor([1. if p == max(e) else 0. for p in e.astype(float)])
+                } 
+                for f, e in zip(paths, scores) 
+                if e.astype(float).sum() != 0.
+            ];
+
+        # prepare Zoom
+        print("Preparing Zoom Samples");
+        zoom_samples: List[Dict[str, Union[Tensor, str]]] = list();
+        for sample in tqdm(zoom):
+            feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample, test=True);
+            zoom_samples.append(self.packer(feature, frame_size=frame_size, test=True));
+      
+        zoom_dataloader: DataLoader = DataLoader(zoom_samples, batch_size=1, num_workers=0);
+        return zoom_dataloader;

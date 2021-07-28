@@ -105,7 +105,7 @@ class BaseDataLoader:
         std: Tensor = torch.sqrt(sum_x2 / N - mean.square());
 
         print("Finish calculating stats!")
-        if not os.path.exists(os.path.dirname(save_path)):
+        if not os.path.exists(os.path.dirname(save_path)) and os.path.dirname(save_path) != "":
             os.makedirs(os.path.dirname(save_path));
         with open(save_path, "wb") as f:
             pickle.dump([mean.to(torch.float32), std.to(torch.float32)], f);
@@ -138,7 +138,7 @@ class BaseDataLoader:
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample);
             train_samples += self.packer(feature, frame_size=frame_size);
 
-        train_dataloader: DataLoader = DataLoader(train_samples, batch_size=batch_size, num_workers=1, shuffle=True);
+        train_dataloader: DataLoader = DataLoader(train_samples, batch_size=batch_size, num_workers=0, shuffle=True);
         return train_dataloader;
 
     def prepare_val(self, frame_size: float) -> DataLoader:
@@ -149,7 +149,7 @@ class BaseDataLoader:
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample);
             val_samples.append(self.packer(feature, frame_size=frame_size, test=True));
 
-        val_dataloader: DataLoader = DataLoader(val_samples, batch_size=1, num_workers=1);
+        val_dataloader: DataLoader = DataLoader(val_samples, batch_size=1, num_workers=0);
 
         return val_dataloader;
 
@@ -161,7 +161,7 @@ class BaseDataLoader:
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample, test=True);
             test_samples.append(self.packer(feature, frame_size=frame_size, test=True));
       
-        test_dataloader: DataLoader = DataLoader(test_samples, batch_size=1, num_workers=1);
+        test_dataloader: DataLoader = DataLoader(test_samples, batch_size=1, num_workers=0);
         return test_dataloader;
 
     def prepare(self, frame_size: float, batch_size: int) -> Tuple[
