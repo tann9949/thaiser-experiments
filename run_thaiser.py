@@ -2,10 +2,9 @@ from argparse import ArgumentParser, Namespace
 import json
 import logging
 import warnings
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 import pytorch_lightning as pl
-from torch.utils import data
 from torch.utils.data import DataLoader
 
 from experiment.data.feature.feature_packer import FeaturePacker

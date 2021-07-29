@@ -47,7 +47,7 @@ def read_config(config_path: str) -> Dict[str, Any]:
 
     # data
     data: Dict[str, Any] = config.get("data", {});
-    test_mics: str = data.get("test_mic", ["con"]);
+    test_mics: str = data.get("test_mics", ["con"]);
     test_zoom: bool = data.get("test_zoom", True);
     dataloader_param: Dict[str, Any] = data.pop("dataloader") if "dataloader" in data.keys() else {};
     include_zoom: bool = dataloader_param.get("include_zoom", False);
