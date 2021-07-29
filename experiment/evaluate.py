@@ -18,6 +18,9 @@ class Evaluator:
         model: BaseModel):
         self.model: BaseModel = model;
 
+        if torch.cuda.is_available():
+            self.model.cuda();
+
     def compute_weighted_accuracy(self, y_true: List[int], y_pred: List[int]) -> float:
         assert len(y_true) == len(y_pred);
         return sum([1. if y == y_hat else 0. for y, y_hat in zip(y_true, y_pred)]) / len(y_true);
