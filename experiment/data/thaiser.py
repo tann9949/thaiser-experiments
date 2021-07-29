@@ -188,7 +188,7 @@ class ThaiSERLoader(BaseDataLoader):
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample, test=True);
             test_samples.append(self.packer(feature, frame_size=frame_size, test=True));
       
-        test_dataloader: DataLoader = DataLoader(test_samples, batch_size=1, num_workers=0);
+        test_dataloader: DataLoader = DataLoader(test_samples, batch_size=1, num_workers=1);
         return test_dataloader;
 
     def prepare_zoom(self, frame_size: float) -> DataLoader:
@@ -233,7 +233,7 @@ class ThaiSERLoader(BaseDataLoader):
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample, test=True);
             zoom_samples.append(self.packer(feature, frame_size=frame_size, test=True));
       
-        zoom_dataloader: DataLoader = DataLoader(zoom_samples, batch_size=1, num_workers=0);
+        zoom_dataloader: DataLoader = DataLoader(zoom_samples, batch_size=1, num_workers=1);
         return zoom_dataloader;
 
 
@@ -276,7 +276,7 @@ class ThaiSERLoader(BaseDataLoader):
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample, test=True);
             iemocap_samples.append(self.packer(feature, frame_size=frame_size, test=True));
       
-        iemocap_dataloader: DataLoader = DataLoader(iemocap_samples, batch_size=1, num_workers=0);
+        iemocap_dataloader: DataLoader = DataLoader(iemocap_samples, batch_size=1, num_workers=1);
         return iemocap_dataloader;
         
     def prepare_emodb(self, frame_size: float) -> DataLoader:
@@ -314,7 +314,7 @@ class ThaiSERLoader(BaseDataLoader):
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample, test=True);
             emodb_samples.append(self.packer(feature, frame_size=frame_size, test=True));
       
-        emodb_dataloader: DataLoader = DataLoader(emodb_samples, batch_size=1, num_workers=0);
+        emodb_dataloader: DataLoader = DataLoader(emodb_samples, batch_size=1, num_workers=1);
         return emodb_dataloader;
         
     def prepare_emovo(self, frame_size: float) -> DataLoader:
@@ -352,6 +352,6 @@ class ThaiSERLoader(BaseDataLoader):
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample, test=True);
             emovo_samples.append(self.packer(feature, frame_size=frame_size, test=True));
       
-        emovo_dataloader: DataLoader = DataLoader(emovo_samples, batch_size=1, num_workers=0);
+        emovo_dataloader: DataLoader = DataLoader(emovo_samples, batch_size=1, num_workers=1);
         return emovo_dataloader;
         
