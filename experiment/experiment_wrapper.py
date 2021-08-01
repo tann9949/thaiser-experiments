@@ -1,3 +1,5 @@
+import json
+import os
 from typing import Any, Dict, List, Union
 
 import numpy as np
@@ -106,7 +108,12 @@ class ExperimentWrapper:
             for test_name, test_dl in self.test_dataloader.items():  # iterate over test loaders
                 if test_name not in results.keys():
                     results[test_name] = {"experiment_results": {}, "statistics": {}}
-                result: Dict[str, Tensor] = evaluator(test_dl);
+                result, predictions = evaluator(test_dl, return_prediction=True);
+                
+                if not os.path.exists(f"{self.checkpoint_path}/{i}/pred_{test_name}"):
+                    os.makedirs(f"{self.checkpoint_path}/{i}/pred_{test_name}");
+                with open(f"{self.checkpoint_path}/{i}/pred_{test_name}/prediction.json", "w") as f:
+                    json.dump(predictions, f);
 
                 for metric in result.keys():  # iterate over
                     if metric not in results[test_name]["experiment_results"].keys():

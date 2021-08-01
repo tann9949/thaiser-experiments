@@ -83,8 +83,8 @@ def main(args: Namespace) -> None:
                 if dataset_name.lower().strip() == "iemocap":
                     test_loaders = {
                         **test_loaders,
-                        # "IEMOCAP_IMPRO": dataloader.prepare_iemocap(frame_size=frame_size, turn_type="impro"),
-                        # "IEMOCAP_SCRIPT": dataloader.prepare_iemocap(frame_size=frame_size, turn_type="script"),
+                        "IEMOCAP_IMPRO": dataloader.prepare_iemocap(frame_size=frame_size, turn_type="impro"),
+                        "IEMOCAP_SCRIPT": dataloader.prepare_iemocap(frame_size=frame_size, turn_type="script"),
                         "IEMOCAP": dataloader.prepare_iemocap(frame_size=frame_size),
                     }
                 elif dataset_name.lower().strip() == "emodb":
