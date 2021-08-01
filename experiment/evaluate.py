@@ -21,11 +21,13 @@ class Evaluator:
         if torch.cuda.is_available():
             self.model.cuda();
 
-    def compute_weighted_accuracy(self, y_true: List[int], y_pred: List[int]) -> float:
+    @staticmethod
+    def compute_weighted_accuracy(y_true: List[int], y_pred: List[int]) -> float:
         assert len(y_true) == len(y_pred);
         return sum([1. if y == y_hat else 0. for y, y_hat in zip(y_true, y_pred)]) / len(y_true);
 
-    def compute_unweighted_accuracy(self, y_true: List[int], y_pred: List[int]) -> float:
+    @staticmethod
+    def compute_unweighted_accuracy(y_true: List[int], y_pred: List[int]) -> float:
         assert len(y_true) == len(y_pred);
         cm = confusion_matrix(y_true, y_pred);
         return (np.diag(cm) / cm.sum(axis=1)).mean();
@@ -84,7 +86,8 @@ class Evaluator:
         unweighted_accuracy: float = self.compute_unweighted_accuracy(y_true, y_pred);
         assert len(names) == len(y_pred) == len(y_true);
         metrics = {"weighted_accuracy": weighted_accuracy, "unweighted_accuracy": unweighted_accuracy};
-        results: List[Dict[str, Any]] = [{"name": name, "prediction": y_hat, "label": y} for name, y_hat, y in zip(names, y_pred, y_true)];
+        results: List[Dict[str, Any]] = [{"name": name, "prediction": int(y_hat), "label": int(y)} for name, y_hat, y in zip(names, y_pred, y_true)];
         if return_prediction:
             return metrics, results;
         return metrics;          
+
