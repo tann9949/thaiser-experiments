@@ -3,9 +3,9 @@ data:
   test_zoom: True
   dataloader:
     label_path: dataset/wav/THAISER/labels.csv
-    agreement: 0.9
+    agreement: 0.8
     smoothing_param: 0.
-    use_soft_target: False
+    use_soft_target: True
     include_fru: False
     include_zoom: False
     train_mic: con
@@ -17,8 +17,8 @@ data:
 featurizer:
   feature_type: fbank
   feature_param:
-    num_mel_bins: &n_mel 40
-    frame_length: 50
+    num_mel_bins: &n_mel 64
+    frame_length: 25
     frame_shift: 10
     low_freq: 0
     high_freq: 8000
@@ -33,13 +33,13 @@ packer:
 model:
   n_channels: [64, 64, 128, 128]
   kernel_size: [5, 3, 3, 3]
-  pool_size: [4, 2, 2, 2]
+  pool_size: [2, 2, 2, 2]
   lstm_unit: 128
   
 train:
-  batch_size: 64
+  batch_size: 32
   n_iteration: 25
-  exp_path: log/hl_ag0.9
+  exp_path: log/sample-normalize/sl_ag0.8
   trainer_param:
     progress_bar_refresh_rate: 0  # disable logging
     weights_summary: null  # disable logging
