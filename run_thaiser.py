@@ -56,6 +56,10 @@ def main(args: Namespace) -> None:
         print(f"Running Fold {fold}");
         print("*"*20);
 
+        checkpoint_path: str = f"{exp_path}/fold{fold}";
+        if packer.stats_path is not None:
+            packer.set_stat_path(f"{checkpoint_path}/{packer.stats_path}");
+
         dataloader: ThaiSERLoader = ThaiSERLoader(
             featurizer=featurizer,
             packer=packer,
@@ -107,7 +111,7 @@ def main(args: Namespace) -> None:
             val_dataloader=val_dataloader,
             test_dataloader=test_loaders,
             n_iteration=n_iteration,
-            checkpoint_path=f"{exp_path}/fold{fold}"
+            checkpoint_path=checkpoint_path
         );
         exp_results: Dict[str, Any] = wrapper.run();   # start training !
         fold_stats[fold] = exp_results;

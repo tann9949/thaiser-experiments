@@ -53,16 +53,16 @@ def read_config(config_path: str) -> Dict[str, Any]:
     include_zoom: bool = dataloader_param.get("include_zoom", False);
 
     # feautre
-    feature: Dict[str, Any] = config.get("featurizer", {});
+    feature: Dict[str, Any] = config.get("featurizer", {"feature_type": "fbank", "feature_param": {}});
     
     # packer
-    packer: Dict[str, Any] = config.get("packer", {});
+    packer: Dict[str, Any] = config.get("packer", {"max_len": 3, "pad_mode": "dup"});
 
     # model
     feature_type: str = feature.get("feat_type", "fbank");
     feature_param: Dict[str, Any] = feature.get("feature_param", {});
     if feature_type == "fbank":
-        in_channel: int = feature_param.get("num_mel_bins", 40);
+        in_channel: int = feature_param.get("num_mel_bins", 64);
     elif feature_type == "spectrogram":
         # TODO:
         pass

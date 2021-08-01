@@ -16,7 +16,7 @@ class ThaiSERLoader(BaseDataLoader):
     training, validation , and testing data
     """
     def __init__(self, 
-        agreement: float,
+        agreement: float = 0.71,  # default value
         fold: int = 0,
         use_soft_target: bool = True,
         smoothing_param: float = 0.,
@@ -76,7 +76,7 @@ class ThaiSERLoader(BaseDataLoader):
         
     def setup_train(self) -> None:
         label: pd.DataFrame = self.label;
-        label = label[label["agreement"] > self.agreement];
+        label = label[label["agreement"] >= self.agreement];
         if self.include_zoom:
             zoom: pd.DataFrame = label[label["mic"] == "mic"];
         label = label[label["mic"] == self.train_mic];
@@ -114,7 +114,7 @@ class ThaiSERLoader(BaseDataLoader):
         
     def setup_val(self) -> None:
         label: pd.DataFrame = self.label;
-        label = label[label["agreement"] > self.agreement];
+        label = label[label["agreement"] >= self.agreement];
         label = label[label["mic"] == self.train_mic];
         
         val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)];
@@ -151,7 +151,7 @@ class ThaiSERLoader(BaseDataLoader):
 
         # setup test labels
         label: pd.DataFrame = self.label;
-        label = label[label["agreement"] > self.agreement];
+        label = label[label["agreement"] >= self.agreement];
         label = label[label["mic"] == mic_type];
         
         test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)];
@@ -196,7 +196,7 @@ class ThaiSERLoader(BaseDataLoader):
             raise ValueError(f"Cannot setup zoom as test fold when it is included in training data");
 
         label: pd.DataFrame = self.label;  # load label
-        label = label[label["agreement"] > self.agreement];  # filter agreement
+        label = label[label["agreement"] >= self.agreement];  # filter agreement
         zoom: pd.DataFrame = label[label["mic"] == "mic"];  # select zoom item
         
         # get scores and file path

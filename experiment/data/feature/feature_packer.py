@@ -47,6 +47,12 @@ class FeaturePacker:
 
         self.stats_path: Optional[str] = stats_path;
 
+    def set_stat_path(self, stat_path: str) -> None:
+        """
+        Reset stat path to given stat_path variable
+        """
+        self.stats_path = stat_path;
+
     def normalize(self, sample: Dict[str, Union[str, Tensor]]) -> Dict[str, Union[str, Tensor]]:
         """
         Normalize feature according to given stats path attribute
