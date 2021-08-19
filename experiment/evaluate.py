@@ -51,7 +51,10 @@ class Evaluator:
 
             with torch.no_grad():
                 # compute logits of each chunk
-                probs: Tensor = torch.stack([F.softmax(self.model(x), dim=-1) for x in feature]);
+                probs: Tensor = torch.stack([
+                    F.softmax(self.model(x.cuda()), dim=-1) if torch.cuda.is_available() else F.softmax(self.model(x), dim=-1)
+                    for x in feature
+                ]);
                 # compute emotion index and compute acc
                 tmp_count: Tensor = torch.zeros([probs.shape[-1],], dtype=torch.int);  # count of each emotion
                 tmp_score: Tensor = torch.zeros([probs.shape[-1],]);  # score of each emotion
