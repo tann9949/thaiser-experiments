@@ -4,6 +4,7 @@ import logging
 import warnings
 from typing import Any, Dict, List
 
+import numpy as np
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
@@ -121,6 +122,17 @@ def main(args: Namespace) -> None:
     names: List[str] = list(fold_stats[0].keys());
     template: str = "fold\t\t"+"\t\t".join(metrics)+"\n";
 
+    # compute global variance of all stats
+    global_stats: Dict[str, Any] = dict()
+    for fold, results in fold_stats.items():
+        for test_name, test_results in results.items():
+            if test_name not in global_stats.keys():
+                global_stats[test_name] = {}
+            for metric_name, metric_results in test_results["experiment_results"].items():
+                if metric_name not in global_stats[test_name].keys():
+                    global_stats[test_name][metric_name] = []
+                global_stats[test_name][metric_name] += metric_results
+
     # compute average of all folds to get final results
     avgs: Dict[str, Any] = {name: {metric: [] for metric in metrics} for name in names};  # initialize template
     for f, result in fold_stats.items(): # iterate over fold
@@ -139,21 +151,17 @@ def main(args: Namespace) -> None:
     template += "\n"
 
     # aggregate all fold results
-    aggregated_result: Dict[str, float] = {
-        test_name: {
-            k: sum(v)/len(v) 
-            for k, v in test_result.items()
-        } for test_name, test_result in avgs.items()
-    };
-    fold_stats["summary"] = aggregated_result;
+    fold_stats["summary"] = global_stats;
 
     # pretty print results
-    for test_name, test_result in aggregated_result.items():
+    for test_name, test_result in global_stats.items():
         template += f"\n**** {test_name} ****\n"
         line: str = "Avg";
         for i, (metric, values) in enumerate(test_result.items()):
             indent: str = "\t\t" if i == 0 else "\t\t\t";
-            line += f"{indent}{values:.4f}";
+            mean = np.array(values).mean()
+            std = np.array(values).std()
+            line += f"{indent}{mean:.4f} ± {std:.4f}";
         template += line
 
     print("");
