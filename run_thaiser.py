@@ -5,6 +5,7 @@ import warnings
 from typing import Any, Dict, List
 
 import numpy as np
+from numpy.core.numeric import cross
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
@@ -28,7 +29,7 @@ def run_parser() ->  Namespace:
     args: Namespace
         Arguments of the program
     """
-    parser = ArgumentParser();
+    parser: ArgumentParser = ArgumentParser();
     parser.add_argument("--config-path", required=True, type=str, help="Path to training config file");
     return parser.parse_args();
     
@@ -50,6 +51,40 @@ def main(args: Namespace) -> None:
     # init result statistics
     fold_stats: Dict[str, Any] = {};
 
+    # preload cross-corpus
+    dataloader: ThaiSERLoader = ThaiSERLoader(
+        featurizer=featurizer,
+        packer=packer,
+        **config["dataloader"]
+    );
+
+    cross_corpus: Dict[str, DataLoader] = {};
+    if test_zoom:
+        cross_corpus = {
+            **cross_corpus,
+            "ZOOM": dataloader.prepare_zoom(frame_size=frame_size)
+        }
+
+    if dataloader.cross_corpus is not None:
+        for dataset_name, _ in dataloader.cross_corpus.items():
+            if dataset_name.lower().strip() == "iemocap":
+                cross_corpus = {
+                    **cross_corpus,
+                    "IEMOCAP_IMPRO": dataloader.prepare_iemocap(frame_size=frame_size, turn_type="impro"),
+                    "IEMOCAP_SCRIPT": dataloader.prepare_iemocap(frame_size=frame_size, turn_type="script"),
+                    "IEMOCAP": dataloader.prepare_iemocap(frame_size=frame_size),
+                }
+            elif dataset_name.lower().strip() == "emodb":
+                cross_corpus = {
+                    **cross_corpus,
+                    "EMODB": dataloader.prepare_emodb(frame_size=frame_size),
+                }
+            elif dataset_name.lower().strip() == "emovo":
+                cross_corpus = {
+                    **cross_corpus,
+                    "EMOVO": dataloader.prepare_emovo(frame_size=frame_size),
+                }
+
     # iterate over fold ( 8 folds for THAI SER)
     for fold in range(8):
         
@@ -66,6 +101,7 @@ def main(args: Namespace) -> None:
             packer=packer,
             **config["dataloader"]
         );
+        dataloader.set_fold(fold);
 
         # prepare train, val data loaders
         dataloader.setup();
@@ -74,34 +110,14 @@ def main(args: Namespace) -> None:
         # prepare test loaders
         test_loaders: Dict[str, DataLoader] = {};
         for mic in test_mics:
-            test_loaders = { 
+            test_loaders = {
                 **test_loaders,
                 f"TEST-{mic}": dataloader.prepare_test(frame_size=frame_size, mic_type=mic),
             }
-        if test_zoom:
-            test_loaders = { 
-                **test_loaders,
-                "ZOOM": dataloader.prepare_zoom(frame_size=frame_size)
-            }
-        if dataloader.cross_corpus is not None:
-            for dataset_name, _ in dataloader.cross_corpus.items():
-                if dataset_name.lower().strip() == "iemocap":
-                    test_loaders = {
-                        **test_loaders,
-                        "IEMOCAP_IMPRO": dataloader.prepare_iemocap(frame_size=frame_size, turn_type="impro"),
-                        "IEMOCAP_SCRIPT": dataloader.prepare_iemocap(frame_size=frame_size, turn_type="script"),
-                        "IEMOCAP": dataloader.prepare_iemocap(frame_size=frame_size),
-                    }
-                elif dataset_name.lower().strip() == "emodb":
-                    test_loaders = {
-                        **test_loaders,
-                        "EMODB": dataloader.prepare_emodb(frame_size=frame_size),
-                    }
-                elif dataset_name.lower().strip() == "emovo":
-                    test_loaders = {
-                        **test_loaders,
-                        "EMOVO": dataloader.prepare_emovo(frame_size=frame_size),
-                    }
+        test_loaders = {
+            **test_loaders,
+            **cross_corpus
+        }
 
         # define training setting
         wrapper: ExperimentWrapper = ExperimentWrapper(
