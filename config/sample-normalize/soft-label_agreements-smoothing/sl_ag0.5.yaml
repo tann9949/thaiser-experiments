@@ -38,8 +38,8 @@ model:
   
 train:
   batch_size: 32
-  n_iteration: 25
-  exp_path: log/sample-normalize/sl_ag0.5
+  n_iteration: 5
+  exp_path: log/sample-normalize-smoothing/sl_ag0.5
   trainer_param:
     progress_bar_refresh_rate: 0  # disable logging
     weights_summary: null  # disable logging

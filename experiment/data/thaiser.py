@@ -17,6 +17,7 @@ class ThaiSERLoader(BaseDataLoader):
     """
     def __init__(self, 
         agreement: float = 0.71,  # default value
+        test_agreement: float = 0.71,  # default test set agreement
         fold: int = 0,
         use_soft_target: bool = True,
         smoothing_param: float = 0.,
@@ -39,6 +40,7 @@ class ThaiSERLoader(BaseDataLoader):
         super().__init__(**kwargs);
         self.fold = fold;  # fold to load dataset from (see self.fold_mapping)
         self.agreement: float = agreement;  # annotator consensus agreement to filter dataset off
+        self.test_agreement: float = test_agreement;  # test set setup for chooinng test set, use 0.71 for default consensus value
         self.train_mic: str = train_mic;  # mic to used for training
         self.include_zoom: bool = include_zoom;  # state whether to include zoom in training set or not
         self.smoothing_param: float = smoothing_param;  # smoothing parameter K for soft labeling
@@ -114,7 +116,7 @@ class ThaiSERLoader(BaseDataLoader):
         
     def setup_val(self) -> None:
         label: pd.DataFrame = self.label;
-        label = label[label["agreement"] >= self.agreement];
+        label = label[label["agreement"] >= self.test_agreement];
         label = label[label["mic"] == self.train_mic];
         
         val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)];
@@ -151,7 +153,7 @@ class ThaiSERLoader(BaseDataLoader):
 
         # setup test labels
         label: pd.DataFrame = self.label;
-        label = label[label["agreement"] >= self.agreement];
+        label = label[label["agreement"] >= self.test_agreement];
         label = label[label["mic"] == mic_type];
         
         test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)];
@@ -196,7 +198,7 @@ class ThaiSERLoader(BaseDataLoader):
             raise ValueError(f"Cannot setup zoom as test fold when it is included in training data");
 
         label: pd.DataFrame = self.label;  # load label
-        label = label[label["agreement"] >= self.agreement];  # filter agreement
+        label = label[label["agreement"] >= self.test_agreement];  # filter agreement
         zoom: pd.DataFrame = label[label["mic"] == "mic"];  # select zoom item
         
         # get scores and file path

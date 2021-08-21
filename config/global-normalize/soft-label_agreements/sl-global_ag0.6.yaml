@@ -38,7 +38,7 @@ model:
   
 train:
   batch_size: 32
-  n_iteration: 25
+  n_iteration: 5
   exp_path: log/global-normalize/sl-global_ag0.6
   trainer_param:
     progress_bar_refresh_rate: 0  # disable logging

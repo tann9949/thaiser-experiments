@@ -1,6 +1,7 @@
 dataset
 mlp_exp
 log
+backup-log
 venv
 **/.DS_store
 **/__pycache__
