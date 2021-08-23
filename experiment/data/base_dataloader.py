@@ -1,6 +1,6 @@
 import os
 import pickle
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Optional
 
 import pandas as pd
 import torch
@@ -10,6 +10,7 @@ from tqdm.auto import tqdm
 
 from .feature.feature_packer import FeaturePacker
 from .feature.featurizer import Featurizer
+from ..model.base_model import BaseModel
 
 
 class BaseDataLoader:
@@ -129,13 +130,52 @@ class BaseDataLoader:
                 os.remove(self.packer.stats_path);
                 self.compute_global_stats(self.packer.stats_path);
 
-    def prepare_train(self, frame_size: float, batch_size: int) -> DataLoader:
+    def prepare_train(self, frame_size: float, batch_size: int, model: Optional[BaseModel] = None, eta: Optional[float] = 0.) -> DataLoader:
+        """
+        Prepare training data
+
+        frame_size: float
+            Frame size used when extract features
+        batch_size: int
+            Batch size for data loader
+        model: Optional[BaseModel]
+            Model that will be used to rescore labels
+        eta: Optional[float]
+            Weight of rescored labels. The new labels distribution will be rescored according
+            to the following equation:
+
+                y_new = y * (1-eta) + y_model * (eta)
+
+            where y_model = model(X)
+        """
         # prepare train
-        print("Preparing Training Samples");
+        if model is not None and eta > 0.:
+            print(f"Preparing Training Samples with rescoring; eta = {eta}")
+        else:
+            print("Preparing Training Samples");
         train_samples: List[Dict[str, Union[Tensor, str]]] = list();
         for sample in tqdm(self.train):
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample);
-            train_samples += self.packer(feature, frame_size=frame_size);
+            samples: List[Dict[str, Tensor]] = self.packer(feature, frame_size=frame_size);
+
+            # rescoring with provided model
+            if model is not None and eta > 0.:
+                rescored_samples: List[Dict[str, Tensor]] = [];
+                for sample in samples:
+                    name: str = sample["name"];
+                    feature: Tensor = sample["feature"];  # feature, fbank
+                    emotion: Tensor = sample["emotion"];  # label distribution, R^{n_emotion}
+                    # calculate pseudo label from trained model
+                    pseudo_emotion: Tensor = model(feature.unsqueeze(dim=0))[0];
+                    # compute average
+                    rescored_emotion: Tensor = emotion * (1 - eta) + pseudo_emotion * eta;
+                    rescored_samples.append({"name": name, "feature": feature, "emotion": rescored_emotion})
+            else:
+                # do noting if no model provided or rescoring factor (eta) = 0 (not use pseudo label information)
+                rescored_samples: List[Dict[str, Tensor]] = samples;
+
+            # add packed features into training data
+            train_samples += rescored_samples
 
         train_dataloader: DataLoader = DataLoader(train_samples, batch_size=batch_size, num_workers=0, shuffle=True);
         return train_dataloader;
@@ -152,11 +192,11 @@ class BaseDataLoader:
 
         return val_dataloader;
 
-    def prepare(self, frame_size: float, batch_size: int) -> Tuple[
+    def prepare(self, frame_size: float, batch_size: int, model: Optional[BaseModel] = None, eta: Optional[float] = 0.) -> Tuple[
         DataLoader,
         DataLoader
     ]:
-        train_dataloader: DataLoader = self.prepare_train(frame_size=frame_size, batch_size=batch_size);
+        train_dataloader: DataLoader = self.prepare_train(frame_size=frame_size, batch_size=batch_size, model=model, eta=eta);
         val_dataloader: DataLoader = self.prepare_val(frame_size=frame_size);
             
         return train_dataloader, val_dataloader

@@ -83,7 +83,8 @@ class ThaiSERLoader(BaseDataLoader):
             zoom: pd.DataFrame = label[label["mic"] == "mic"];
         label = label[label["mic"] == self.train_mic];
         
-        train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)];
+        # train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)];
+        train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)].iloc[:200];  # FIXME:
 
         if self.include_zoom:
             train = pd.concat([train, zoom], axis=0).reset_index(drop=True);
@@ -119,7 +120,8 @@ class ThaiSERLoader(BaseDataLoader):
         label = label[label["agreement"] >= self.test_agreement];
         label = label[label["mic"] == self.train_mic];
         
-        val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)];
+        # val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)];
+        val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)].iloc[:200];  # FIXME:
         scores: np.ndarray = val[self.score_cols].values.astype(float);
         paths: np.ndarray = val["path"].values;
         
@@ -156,7 +158,8 @@ class ThaiSERLoader(BaseDataLoader):
         label = label[label["agreement"] >= self.test_agreement];
         label = label[label["mic"] == mic_type];
         
-        test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)];
+        # test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)];
+        test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)].iloc[:200];  # FIXME:
         scores: np.ndarray = test[self.score_cols].values.astype(float);
         paths: np.ndarray = test["path"].values;
         
@@ -199,7 +202,8 @@ class ThaiSERLoader(BaseDataLoader):
 
         label: pd.DataFrame = self.label;  # load label
         label = label[label["agreement"] >= self.test_agreement];  # filter agreement
-        zoom: pd.DataFrame = label[label["mic"] == "mic"];  # select zoom item
+        # zoom: pd.DataFrame = label[label["mic"] == "mic"];  # select zoom item
+        zoom: pd.DataFrame = label[label["mic"] == "mic"].iloc[:200];  # FIXME:
         
         # get scores and file path
         scores: np.ndarray = zoom[self.score_cols].values.astype(float);
@@ -255,7 +259,8 @@ class ThaiSERLoader(BaseDataLoader):
         iemocap: pd.DataFrame = pd.read_csv(label_path);
         
         # filter iemocap
-        iemocap = iemocap[iemocap["dominant_emotion"].isin([e.replace("_score", "") for e in self.score_cols])];
+        # iemocap = iemocap[iemocap["dominant_emotion"].isin([e.replace("_score", "") for e in self.score_cols])];
+        iemocap = iemocap[iemocap["dominant_emotion"].isin([e.replace("_score", "") for e in self.score_cols])].iloc[:300];  # FIXME:
         if turn_type == "impro":
             iemocap = iemocap[iemocap["name"].str.contains("impro")];
         elif turn_type == "script":

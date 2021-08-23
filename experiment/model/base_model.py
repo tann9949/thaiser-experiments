@@ -14,6 +14,11 @@ class BaseModel(pl.LightningModule):
         self.hyperparams: Dict[str, Any] = hparams;
         self.learning_rate: float = self.hyperparams.get("learning_rate", 1e-4);
 
+    def decay_learning_rate(self, factor: float) -> float:
+        new_lr = self.learning_rate * factor
+        self.learning_rate = new_lr;
+        return new_lr;
+
     def forward(self, x: Dict[str, Union[str, Tensor]], *args, **kwargs) -> Tensor:
         raise NotImplementedError();
 

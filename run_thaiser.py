@@ -139,7 +139,7 @@ def main(args: Namespace) -> None:
     template: str = "fold\t\t"+"\t\t".join(metrics)+"\n";
 
     # compute global variance of all stats
-    global_stats: Dict[str, Any] = dict()
+    global_stats: Dict[str, Any] = dict();
     for fold, results in fold_stats.items():
         for test_name, test_results in results.items():
             if test_name not in global_stats.keys():

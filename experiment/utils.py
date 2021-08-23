@@ -89,6 +89,7 @@ def read_config(config_path: str) -> Dict[str, Any]:
     batch_size: int = train.get("batch_size", 64);
     n_iteration: int = train.get("n_iteration", 25);
     exp_path: str = train.get("exp_path", "log/exp");
+    eta: float = train.get("eta", 0.5);
 
     if test_zoom and include_zoom:
         raise ValueError(f"Cannot parse `test_zoom` and `include_zoom` at the same time")
@@ -104,7 +105,8 @@ def read_config(config_path: str) -> Dict[str, Any]:
         "test_zoom": test_zoom,
         "batch_size": batch_size,
         "n_iteration": n_iteration,
-        "exp_path": exp_path
+        "exp_path": exp_path,
+        "eta": 0.5
     }
 
 

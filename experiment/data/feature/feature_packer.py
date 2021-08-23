@@ -99,8 +99,8 @@ class FeaturePacker:
         sample: Dict[str, Union[str, Tensor]], 
         frame_size: int, 
         test: bool = False) -> Union[
-            Dict[str, Union[str, Tensor]],
-            Dict[str, Union[str, List[Tensor], Tensor]]
+            Dict[str, Tensor],
+            List[Dict[str, Tensor]]
         ]:
         """
         Split file according to class attribute, max_len and

@@ -129,8 +129,8 @@ class ExperimentWrapper:
             print("*"*5, name, "*"*5);
             for metric in results[name]["experiment_results"]:  # iterate over metric
                 result: np.ndarray = np.array(results[name]["experiment_results"][metric]);
-                metric_mean: Tensor = result.mean();
-                metric_std: Tensor = result.std();
+                metric_mean: float = result.mean();
+                metric_std: float = result.std();
                 results[name]["statistics"][metric] = { "mean": metric_mean, "std": metric_std };
             
                 print(f"{metric}: {metric_mean:.4f} ± {metric_std:.4f}")
