@@ -85,7 +85,7 @@ def main(args: Namespace) -> None:
                 }
 
     # iterate over fold ( 8 folds for THAI SER)
-    for fold in range(3):  # FIXME: change to 8
+    for fold in range(8):
 
         print("*"*20);
         print(f"Running Fold {fold}");
