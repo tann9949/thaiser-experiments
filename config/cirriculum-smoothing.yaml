@@ -1,0 +1,50 @@
+data:
+  test_mics: [con, clip]
+  test_zoom: True
+  dataloader:
+    label_path: dataset/wav/THAISER/labels.csv
+    agreement: 0.71
+    smoothing_param: 0.75
+    use_soft_target: True
+    include_fru: False
+    include_zoom: False
+    train_mic: con
+    cross_corpus:
+      iemocap: dataset/wav/IEMOCAP_full_release/labels.csv
+      emodb: dataset/wav/emodb/labels.csv
+      emovo: dataset/wav/EMOVO/labels.csv
+
+featurizer:
+  feature_type: fbank
+  feature_param:
+    num_mel_bins: &n_mel 64
+    frame_length: 25
+    frame_shift: 10
+    low_freq: 0
+    high_freq: 8000
+    sample_frequency: 16000
+  vtlp_range: [0.9, 1.1]
+
+packer:
+  max_len: &max_len 3
+  pad_mode: dup
+  stats_path: null
+
+model:
+  n_channels: [64, 64, 128, 128]
+  kernel_size: [5, 3, 3, 3]
+  pool_size: [2, 2, 2, 2]
+  lstm_unit: 128
+  
+train:
+  eta: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.5]
+  batch_size: 32
+  n_iteration: 5
+  learning_rates: [0.0001, 0.00005, 0.00001, 0.000005, 0.000001, 0.0000005, 0.0000001]
+  exp_path: log/cirriculum-smoothing
+  trainer_param:
+    progress_bar_refresh_rate: 0  # disable logging
+    weights_summary: null  # disable logging
+    max_epochs: 5
+    gpus: [0]
+    

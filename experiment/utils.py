@@ -47,7 +47,8 @@ def read_config(config_path: str) -> Dict[str, Any]:
 
     # data
     data: Dict[str, Any] = config.get("data", {});
-    test_mics: str = data.get("test_mics", ["con"]);
+    test_mics: List[str] = data.get("test_mics", ["con"]);
+    test_mics = [test_mics] if isinstance(test_mics, str) else test_mics;
     test_zoom: bool = data.get("test_zoom", True);
     dataloader_param: Dict[str, Any] = data.pop("dataloader") if "dataloader" in data.keys() else {};
     include_zoom: bool = dataloader_param.get("include_zoom", False);
@@ -89,7 +90,8 @@ def read_config(config_path: str) -> Dict[str, Any]:
     batch_size: int = train.get("batch_size", 64);
     n_iteration: int = train.get("n_iteration", 25);
     exp_path: str = train.get("exp_path", "log/exp");
-    eta: float = train.get("eta", 0.5);
+    eta: Union[List[float], float] = train.get("eta", [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.5]);
+    learning_rates: float = train.get("learning_rates", [0.0001, 0.00005, 0.00001, 0.000005, 0.000001, 0.0000005, 0.0000001]);
 
     if test_zoom and include_zoom:
         raise ValueError(f"Cannot parse `test_zoom` and `include_zoom` at the same time")
@@ -106,7 +108,8 @@ def read_config(config_path: str) -> Dict[str, Any]:
         "batch_size": batch_size,
         "n_iteration": n_iteration,
         "exp_path": exp_path,
-        "eta": 0.5
+        "eta": eta,
+        "learning_rates": learning_rates
     }
 
 

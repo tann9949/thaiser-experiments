@@ -11,3 +11,7 @@ venv
 LINE_TOKEN.txt
 **/.vscode
 config/test.yaml
+notebook-playground
+*playground*
+workshop
+.Trash*

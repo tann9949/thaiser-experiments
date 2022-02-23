@@ -20,10 +20,11 @@ class ThaiSERLoader(BaseDataLoader):
         test_agreement: float = 0.71,  # default test set agreement
         fold: int = 0,
         use_soft_target: bool = True,
-        smoothing_param: float = 0.,
         train_mic: str = "con",
+        turn_type: str = "all",
         include_fru: bool = False,
         include_zoom: bool = False,
+        prune_corpus: bool = False,
         cross_corpus: Optional[Dict[str, str]] = None,
         **kwargs):
         """
@@ -42,9 +43,10 @@ class ThaiSERLoader(BaseDataLoader):
         self.agreement: float = agreement;  # annotator consensus agreement to filter dataset off
         self.test_agreement: float = test_agreement;  # test set setup for chooinng test set, use 0.71 for default consensus value
         self.train_mic: str = train_mic;  # mic to used for training
+        self.turn_type: str = turn_type.lower().strip();
         self.include_zoom: bool = include_zoom;  # state whether to include zoom in training set or not
-        self.smoothing_param: float = smoothing_param;  # smoothing parameter K for soft labeling
         self.use_soft_target: bool = use_soft_target;  # states whether to use soft label as a target or not
+        self.prune_corpus: bool = prune_corpus;  # specify whether to prune corpus to make dataset size similar to IEMOCAP
         self.cross_corpus: Optional[Dict[str, str]] = cross_corpus;  # a dictionary containing corpus name and its corresponded labels.csv path
 
         # emotion idx follow this columns
@@ -53,16 +55,30 @@ class ThaiSERLoader(BaseDataLoader):
         else:
             self.score_cols: List[str] = ["neutral_score", "angry_score", "happy_score", "sad_score"];
 
-        self.fold_mapping: Dict[int, List[int]] = {
-            0: [list(range(1, 71)), list(range(71, 76)), list(range(76, 81))],
-            1: [list(range(1, 61)) + list(range(71, 81)), list(range(61, 66)), list(range(66, 71))],
-            2: [list(range(1, 51)) + list(range(61, 81)), list(range(51, 56)), list(range(56, 61))],
-            3: [list(range(1, 41)) + list(range(51, 81)), list(range(41, 46)), list(range(46, 51))],
-            4: [list(range(1, 31)) + list(range(41, 81)), list(range(31, 36)), list(range(36, 41))],
-            5: [list(range(1, 21)) + list(range(31, 81)), list(range(21, 26)), list(range(26, 31))],
-            6: [list(range(1, 11)) + list(range(21, 81)), list(range(11, 16)), list(range(16, 21))],
-            7: [list(range(11, 81)), list(range(1, 6)), list(range(6, 11))],
-        };
+        if not self.prune_corpus:
+            self.fold_mapping: Dict[int, List[int]] = {
+                0: [list(range(1, 71)), list(range(71, 76)), list(range(76, 81))],
+                1: [list(range(1, 61)) + list(range(71, 81)), list(range(61, 66)), list(range(66, 71))],
+                2: [list(range(1, 51)) + list(range(61, 81)), list(range(51, 56)), list(range(56, 61))],
+                3: [list(range(1, 41)) + list(range(51, 81)), list(range(41, 46)), list(range(46, 51))],
+                4: [list(range(1, 31)) + list(range(41, 81)), list(range(31, 36)), list(range(36, 41))],
+                5: [list(range(1, 21)) + list(range(31, 81)), list(range(21, 26)), list(range(26, 31))],
+                6: [list(range(1, 11)) + list(range(21, 81)), list(range(11, 16)), list(range(16, 21))],
+                7: [list(range(11, 81)), list(range(1, 6)), list(range(6, 11))],
+            };
+        else:
+            self.fold_mapping: Dict[int, List[int]] = {
+                0: [[44, 80, 23, 78, 33, 31, 32, 40, 38, 55, 27, 50, 35, 29, 76, 46], [25, 63], [39, 48]],
+                1: [[44, 80, 23, 78, 33, 31, 32, 40, 38, 55, 27, 50, 35, 29, 76, 46], [39, 48], [25, 63]],
+                2: [[39, 48, 25, 63, 33, 31, 32, 40, 38, 55, 27, 50, 35, 29, 76, 46], [23, 78], [44, 80]],
+                3: [[39, 48, 25, 63, 33, 31, 32, 40, 38, 55, 27, 50, 35, 29, 76, 46], [44, 80], [23, 78]],
+                4: [[39, 48, 25, 63, 44, 80, 23, 78, 38, 55, 27, 50, 35, 29, 76, 46], [32, 40], [33, 31]],
+                5: [[39, 48, 25, 63, 44, 80, 23, 78, 38, 55, 27, 50, 35, 29, 76, 46], [33, 31], [32, 40]],
+                6: [[39, 48, 25, 63, 44, 80, 23, 78, 33, 31, 32, 40, 35, 29, 76, 46], [27, 50], [38, 55]],
+                7: [[39, 48, 25, 63, 44, 80, 23, 78, 33, 31, 32, 40, 35, 29, 76, 46], [38, 55], [27, 50]],
+                8: [[39, 48, 25, 63, 44, 80, 23, 78, 33, 31, 32, 40, 38, 55, 27, 50], [76, 46], [35, 29]],
+                9: [[39, 48, 25, 63, 44, 80, 23, 78, 33, 31, 32, 40, 38, 55, 27, 50], [35, 29], [76, 46]]
+            };
         self.train_studios, self.val_studios, self.test_studios = self.fold_mapping[self.fold];
 
     def set_fold(self, fold: int) -> None:
@@ -75,6 +91,7 @@ class ThaiSERLoader(BaseDataLoader):
             Fold to set dataloader to
         """
         self.fold = fold;
+        self.train_studios, self.val_studios, self.test_studios = self.fold_mapping[self.fold]
         
     def setup_train(self) -> None:
         label: pd.DataFrame = self.label;
@@ -82,6 +99,7 @@ class ThaiSERLoader(BaseDataLoader):
         if self.include_zoom:
             zoom: pd.DataFrame = label[label["mic"] == "mic"];
         label = label[label["mic"] == self.train_mic];
+        label = label[label["turn_type"] == self.turn_type] if self.turn_type != "all" else label
         
         train: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.train_studios)];
 
@@ -95,11 +113,7 @@ class ThaiSERLoader(BaseDataLoader):
             self.train: List[Dict[str, Union[str, Tensor]]] = [
                 {
                     "feature": f, 
-                    "emotion": (
-                        self.smoothing_param + Tensor(e.astype(float))
-                    ).divide(
-                        self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
-                    )
+                    "emotion": e.astype(float)
                 }
                 for f, e in zip(paths, scores) 
                 if e.astype(float).sum() != 0.
@@ -118,6 +132,7 @@ class ThaiSERLoader(BaseDataLoader):
         label: pd.DataFrame = self.label;
         label = label[label["agreement"] >= self.test_agreement];
         label = label[label["mic"] == self.train_mic];
+        label = label[label["turn_type"] == self.turn_type] if self.turn_type != "all" else label
         
         val: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.val_studios)];
         scores: np.ndarray = val[self.score_cols].values.astype(float);
@@ -127,11 +142,7 @@ class ThaiSERLoader(BaseDataLoader):
             self.val: List[Dict[str, Union[str, Tensor]]] = [
                 {
                     "feature": f, 
-                    "emotion": (
-                        self.smoothing_param + Tensor(e.astype(float))
-                    ).divide(
-                        self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
-                    )
+                    "emotion": e.astype(float)
                 }
                 for f, e in zip(paths, scores) 
                 if e.astype(float).sum() != 0.
@@ -146,7 +157,8 @@ class ThaiSERLoader(BaseDataLoader):
                 if e.astype(float).sum() != 0.
             ];
         
-    def prepare_test(self, frame_size, mic_type: Optional[str]) -> DataLoader:
+    def prepare_test(self, frame_size: float, mic_type: Optional[str] = None) -> DataLoader:
+        # NOTE: need to merge setup+prepare here because to reduce redundant test loader
         # init mic
         if mic_type is None:
             mic_type = self.train_mic;
@@ -155,6 +167,7 @@ class ThaiSERLoader(BaseDataLoader):
         label: pd.DataFrame = self.label;
         label = label[label["agreement"] >= self.test_agreement];
         label = label[label["mic"] == mic_type];
+        label = label[label["turn_type"] == self.turn_type] if self.turn_type != "all" else label
         
         test: pd.DataFrame = label[label["studio_id"].map(lambda x: int(x[1:]) in self.test_studios)];
         scores: np.ndarray = test[self.score_cols].values.astype(float);
@@ -164,11 +177,7 @@ class ThaiSERLoader(BaseDataLoader):
             self.test: List[Dict[str, Union[str, Tensor]]] = [
                 {
                     "feature": f, 
-                    "emotion": (
-                        self.smoothing_param + Tensor(e.astype(float))
-                    ).divide(
-                        self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
-                    )
+                    "emotion": e.astype(float)
                 }
                 for f, e in zip(paths, scores) 
                 if e.astype(float).sum() != 0.
@@ -182,7 +191,7 @@ class ThaiSERLoader(BaseDataLoader):
                 for f, e in zip(paths, scores) 
                 if e.astype(float).sum() != 0.
             ];
-            
+                
         # prepare test
         print("Preparing Testing Samples");
         test_samples: List[Dict[str, Union[Tensor, str]]] = list();
@@ -209,11 +218,7 @@ class ThaiSERLoader(BaseDataLoader):
             zoom: List[Dict[str, Union[str, Tensor]]] = [
                 {
                     "feature": f, 
-                    "emotion": (
-                        self.smoothing_param + Tensor(e.astype(float))
-                    ).divide(
-                        self.smoothing_param * len(Tensor(e.astype(float))) + Tensor(e.astype(float)).sum()
-                    )
+                    "emotion": e.astype(float)
                 }
                 for f, e in zip(paths, scores) 
                 if e.astype(float).sum() != 0.

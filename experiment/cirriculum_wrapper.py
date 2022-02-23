@@ -29,13 +29,13 @@ class CirriculumWrapper:
         self,
         ModelClass: BaseModel,
         fold: int,
-        eta: float,
+        eta: Union[float, List[float]],
         config: Dict[str, Any],
         cross_corpus: Dict[str, DataLoader],
         checkpoint_path: str,
+        learning_rates: List[float],
         agreement_range: Tuple[float, float] = (0.3, 1.0),
-        agreement_step: float = 0.1,
-        learning_rate_decay_factor: float = 0.5):
+        agreement_step: float = 0.1,):
         """
         Cirriculum Training Wrapper Constructor. This wrapper run cirriculum learning as proposed
         in a paper for `n_iteration` times stated in prompted config dictionary
@@ -54,6 +54,8 @@ class CirriculumWrapper:
             when evaluating the model
         checkpoint_path: str
             Path to stored each training log and model
+        learning_rates: List[float]
+            A list of learning rate used for each agreement training
         agreement_range: Tuple[float, float]
             Min and Max (exclusive) value of agreement value to generate a cirriculum
         agreement_step: float
@@ -62,15 +64,15 @@ class CirriculumWrapper:
             A factor used to scale learning rate once finish training on one agreement value
         """
         self.fold: int = fold;
-        assert 0. <= eta <= 1., "eta must be within [0, 1]"
-        self.eta: float = eta;
 
         self.ModelClass = ModelClass
-        self.learning_rate_decay_factor: float = learning_rate_decay_factor;
+        self.learning_rates: List[float] = learning_rates;
 
         self.min_agreement: float = agreement_range[0];  # inclusive
         self.max_agreement: float = agreement_range[1];  # exclusive
         self.agreement_step: float = agreement_step;
+        self.agreements_iter: np.ndarray = np.arange(self.min_agreement, self.max_agreement, self.agreement_step)[::-1];
+        assert len(self.learning_rates) == len(self.agreements_iter), f"Length of learning rates ({len(self.learning_rates)}) not equal to agreement range ({len(self.agreements_iter)})"
 
         self.cross_corpus: Dict[str, DataLoader] = cross_corpus;
         self.checkpoint_path: str = checkpoint_path;
@@ -86,6 +88,12 @@ class CirriculumWrapper:
         self.test_mics: List[str] = config["test_mics"];
         self.n_iteration: int = config["n_iteration"];
         self.batch_size: int = config["batch_size"];
+            
+        self.eta: List[float] = eta if isinstance(eta, list) else [0.] + [eta] * (len(self.agreements_iter) - 1);
+        assert self.eta[0] == 0., f"First element of eta must be 0."
+        assert all(0. <= eta_i <= 1. for eta_i in self.eta), "eta must be within [0, 1]"
+        assert len(self.eta) == len(self.agreements_iter)
+
 
     def run(self) -> Dict[str, Any]:
         """
@@ -104,7 +112,7 @@ class CirriculumWrapper:
             model: BaseModel = self.ModelClass(self.hparams);
 
             # iterate over agreement in reversal order as high agreement = easy samples
-            for agreement in np.arange(self.min_agreement, self.max_agreement, self.agreement_step)[::-1]:
+            for (eta, lr, agreement) in zip(self.eta, self.learning_rates, self.agreements_iter):
 
                 #### Prepare train/val/test dataloader ####
                 dataloader: ThaiSERLoader = ThaiSERLoader(
@@ -120,14 +128,14 @@ class CirriculumWrapper:
                     frame_size=self.frame_size, 
                     batch_size=self.batch_size,
                     model=model,
-                    eta=self.eta if agreement != self.max_agreement else 0.  # set weight to zero if at the start of iteration
+                    eta=eta
                 );
 
                 test_loaders: Dict[str, DataLoader] = {};
                 for mic in self.test_mics:
                     test_loaders = {
                         **test_loaders,
-                        f"TEST-{mic}": dataloader.prepare_test(frame_size=self.frame_size, mic_type=mic),
+                        f"TEST-{mic}": dataloader.prepare_test(frame_size=self.frame_size),
                     }
                 test_loaders = {
                     **test_loaders,
@@ -137,17 +145,15 @@ class CirriculumWrapper:
                 #### train model using trainer ####
                 # declare trainer
                 callbacks: List[Callback] = [
-                    ModelCheckpoint(dirpath=f"{self.checkpoint_path}/{i}/ag-{agreement}", monitor="val_loss")
+                    ModelCheckpoint(dirpath=f"{self.checkpoint_path}/{i}/ag-{agreement:.2f}", monitor="val_loss")
                 ];
-                logger: TensorBoardLogger = TensorBoardLogger(save_dir=f"{self.checkpoint_path}/{i}/ag-{agreement}", version=1, name="lightning_logs")
-                if agreement == self.max_agreement:
-                    new_lr: float = model.learning_rate;
-                else:
-                    new_lr: float = model.decay_learning_rate(self.learning_rate_decay_factor);  # update trainer learning rate
+                logger: TensorBoardLogger = TensorBoardLogger(save_dir=f"{self.checkpoint_path}/{i}/ag-{agreement:.2f}", version=1, name="lightning_logs")
+                model.set_learning_rate(lr);  # update trainer learning rate
+                
                 trainer: pl.Trainer = pl.Trainer(**self.trainer_params, callbacks=callbacks, logger=logger);  # declare Trainer
 
                 # fit model
-                print(">"*5, f"Training on Agreement value = {agreement}, learning rate = {new_lr}")
+                print(">"*5, f"Training on Agreement value = {agreement:.2f}, learning rate = {lr}, eta = {eta}")
                 trainer.fit(
                     model, 
                     train_dataloader=train_dataloader, 
@@ -155,12 +161,11 @@ class CirriculumWrapper:
                 );
 
                 # save weight after finished training
-                weight_path: str = f"{self.checkpoint_path}/{i}/ag-{agreement}/final.ckpt";
+                weight_path: str = f"{self.checkpoint_path}/{i}/ag-{agreement:.2f}/final.ckpt";
                 trainer.save_checkpoint(weight_path);
 
                 #### Evaluate Model from agreement training ####
                 evaluator :Evaluator = Evaluator(model);
-                agreement: str = str(round(agreement, 2));  # format float -> str for key storing
                 if agreement not in results.keys():
                     results[agreement] = {}
                 for test_name, test_dl in test_loaders.items():
@@ -168,9 +173,9 @@ class CirriculumWrapper:
                         results[agreement][test_name] = {"experiment_results": {}, "statistics": {}}
                     result, predictions = evaluator(test_dl, return_prediction=True);
 
-                    if not os.path.exists(f"{self.checkpoint_path}/{i}/ag-{agreement}/pred_{test_name}"):
-                        os.makedirs(f"{self.checkpoint_path}/{i}/ag-{agreement}/pred_{test_name}")
-                    with open(f"{self.checkpoint_path}/{i}/ag-{agreement}/pred_{test_name}/prediction.json", "w") as f:
+                    if not os.path.exists(f"{self.checkpoint_path}/{i}/ag-{agreement:.2f}/pred_{test_name}"):
+                        os.makedirs(f"{self.checkpoint_path}/{i}/ag-{agreement:.2f}/pred_{test_name}")
+                    with open(f"{self.checkpoint_path}/{i}/ag-{agreement:.2f}/pred_{test_name}/prediction.json", "w") as f:
                         json.dump(predictions, f);
 
                     for metric in result.keys():
@@ -194,6 +199,7 @@ class CirriculumWrapper:
                     metric_std: float = exp_result.std();
                     results[ag][name]["statistics"][metric] = { "mean": metric_mean, "std": metric_std };
                     print(f"{metric}: {metric_mean:.4f} ± {metric_std:.4f}")
+            print("\n");
         print(f"-"*20);
 
         return results;

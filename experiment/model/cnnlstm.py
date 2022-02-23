@@ -13,8 +13,9 @@ class CNNLSTM(BaseModel):
     def __init__(
         self, 
         hparams,
+        schedule_learning_rate = False,
         **kwargs):
-        super().__init__(hparams, **kwargs);
+        super().__init__(hparams, schedule_learning_rate, **kwargs);
         in_channel: int = hparams.get("in_channel", 64)
         sequence_length: int = hparams.get("sequence_length", 300)
         n_channels: List[int] = hparams.get("n_channels", [64, 64, 128, 128])

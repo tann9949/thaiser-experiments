@@ -1,20 +1,23 @@
-from argparse import ArgumentParser, Namespace
 import json
 import logging
 import warnings
+from argparse import ArgumentParser, Namespace
 from typing import Any, Dict, List
 
 import numpy as np
-from numpy.core.numeric import cross
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import Callback, ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger
 from torch.utils.data import DataLoader
 
 from experiment.data.feature.feature_packer import FeaturePacker
 from experiment.data.feature.featurizer import Featurizer
 from experiment.data.thaiser import ThaiSERLoader
+from experiment.data.iemocap import IEMOCAPLoader
 from experiment.experiment_wrapper import ExperimentWrapper
 from experiment.model.cnnlstm import CNNLSTM
 from experiment.utils import notify_line, read_config
+from experiment.evaluate import Evaluator
 
 warnings.filterwarnings("ignore")
 pl.utilities.distributed.log.setLevel(logging.ERROR)
@@ -33,61 +36,35 @@ def run_parser() ->  Namespace:
     parser.add_argument("--config-path", required=True, type=str, help="Path to training config file");
     return parser.parse_args();
     
-
+    
 def main(args: Namespace) -> None:
-    # unpack config
     config: Dict[str, Any] = read_config(args.config_path);
     frame_size: float = config["frame_size"];
-    test_mics: List[str] = config["test_mics"];
-    test_zoom: bool = config["test_zoom"];
+    exp_path: str = config["exp_path"];
     batch_size: int = config["batch_size"];
     n_iteration: int = config["n_iteration"];
-    exp_path: str = config["exp_path"];
 
-    #### Featurizer, Packer ####
     featurizer: Featurizer = Featurizer(**config["featurizer"]);
     packer: FeaturePacker = FeaturePacker(**config["packer"]);
 
-    # init result statistics
     fold_stats: Dict[str, Any] = {};
 
-    # preload cross-corpus
-    dataloader: ThaiSERLoader = ThaiSERLoader(
+    dataloader: IEMOCAPLoader = IEMOCAPLoader(
         featurizer=featurizer,
         packer=packer,
         **config["dataloader"]
     );
+    dataloader.setup()
 
-    cross_corpus: Dict[str, DataLoader] = {};
-    if test_zoom:
-        cross_corpus = {
-            **cross_corpus,
-            "ZOOM": dataloader.prepare_zoom(frame_size=frame_size)
-        }
-
-    if dataloader.cross_corpus is not None:
-        for dataset_name, _ in dataloader.cross_corpus.items():
-            if dataset_name.lower().strip() == "iemocap":
-                cross_corpus = {
-                    **cross_corpus,
-                    "IEMOCAP_IMPRO": dataloader.prepare_iemocap(frame_size=frame_size, turn_type="impro"),
-                    "IEMOCAP_SCRIPT": dataloader.prepare_iemocap(frame_size=frame_size, turn_type="script"),
-                    "IEMOCAP": dataloader.prepare_iemocap(frame_size=frame_size),
-                }
-            elif dataset_name.lower().strip() == "emodb":
-                cross_corpus = {
-                    **cross_corpus,
-                    "EMODB": dataloader.prepare_emodb(frame_size=frame_size),
-                }
-            elif dataset_name.lower().strip() == "emovo":
-                cross_corpus = {
-                    **cross_corpus,
-                    "EMOVO": dataloader.prepare_emovo(frame_size=frame_size),
-                }
-
-    # iterate over fold ( 8 folds for THAI SER)
-    for fold in range(len(dataloader.fold_mapping)):
-        
+    cross_corpus = {
+        "THAISER_IMPRO": dataloader.prepare_thaiser(frame_size=frame_size, turn_type="impro"),
+        "THAISER_SCRIPT": dataloader.prepare_thaiser(frame_size=frame_size, turn_type="script"),
+        "THAISER": dataloader.prepare_thaiser(frame_size=frame_size, turn_type="all"),
+        "EMODB": dataloader.prepare_emodb(frame_size=frame_size),
+        "EMOVO": dataloader.prepare_emovo(frame_size=frame_size)
+    }
+    
+    for fold in range(10):
         print("*"*20);
         print(f"Running Fold {fold}");
         print("*"*20);
@@ -96,30 +73,24 @@ def main(args: Namespace) -> None:
         if packer.stats_path is not None:
             packer.set_stat_path(f"{checkpoint_path}/{packer.stats_path}");
 
-        dataloader: ThaiSERLoader = ThaiSERLoader(
+        dataloader: IEMOCAPLoader = IEMOCAPLoader(
+            fold=fold,
             featurizer=featurizer,
             packer=packer,
             **config["dataloader"]
         );
         dataloader.set_fold(fold);
+        dataloader.setup()
 
-        # prepare train, val data loaders
-        dataloader.setup();
-        train_dataloader, val_dataloader = dataloader.prepare(frame_size=frame_size, batch_size=batch_size);
-
-        # prepare test loaders
-        test_loaders: Dict[str, DataLoader] = {};
-        for mic in test_mics:
-            test_loaders = {
-                **test_loaders,
-                f"TEST-{mic}": dataloader.prepare_test(frame_size=frame_size, mic_type=mic),
-            }
+        train_dataloader, val_dataloader = dataloader.prepare(
+            frame_size=frame_size,
+            batch_size=batch_size
+        )
         test_loaders = {
-            **test_loaders,
+            "TEST": dataloader.prepare_test(frame_size=frame_size),
             **cross_corpus
         }
 
-        # define training setting
         wrapper: ExperimentWrapper = ExperimentWrapper(
             ModelClass=CNNLSTM,
             hparams=config["model_hparams"],
@@ -129,10 +100,10 @@ def main(args: Namespace) -> None:
             test_dataloader=test_loaders,
             n_iteration=n_iteration,
             checkpoint_path=checkpoint_path
-        );
-        exp_results: Dict[str, Any] = wrapper.run();   # start training !
+        )
+        exp_results = wrapper.run()
         fold_stats[fold] = exp_results;
-
+        
     # print results
     metrics: List[str] = list(list(fold_stats[0].values())[0]["statistics"].keys());
     names: List[str] = list(fold_stats[0].keys());
@@ -192,7 +163,7 @@ def main(args: Namespace) -> None:
 
     # notify line
     notify_line(template);
-
+    
 
 if __name__ == "__main__":
     args = run_parser();

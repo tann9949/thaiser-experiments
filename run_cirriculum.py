@@ -43,6 +43,7 @@ def main(args: Namespace) -> None:
     eta: List[str] = config["eta"];
     test_zoom: bool = config["test_zoom"];
     exp_path: str = config["exp_path"];
+    learning_rates: List[float] = config["learning_rates"];
 
     # format config such that compatible
     del config["dataloader"]["agreement"]
@@ -101,9 +102,9 @@ def main(args: Namespace) -> None:
             config=config,
             cross_corpus=cross_corpus,
             checkpoint_path=checkpoint_path,
+            learning_rates=learning_rates,
             agreement_range=(0.3, 1.0),
             agreement_step=0.1,
-            learning_rate_decay_factor=0.5
         );
         exp_results: Dict[str, Any] = wrapper.run();
         fold_stats[fold] = exp_results;
@@ -161,7 +162,14 @@ def main(args: Namespace) -> None:
     print("*"*20);
     print("All Folds Summary");
     print("*"*20);
-    print(template)
+    print(template);
+    
+    # save experiment results
+    with open(f"{exp_path}/exp_results.json", "w") as f:
+        json.dump(fold_stats, f, indent=4);
+
+    # notify line
+    notify_line(template);
 
         
 if __name__ == "__main__":

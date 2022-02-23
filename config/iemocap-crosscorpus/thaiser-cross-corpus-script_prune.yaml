@@ -1,5 +1,5 @@
 data:
-  test_mics: [con, clip]
+  test_mics: con
   test_zoom: True
   dataloader:
     label_path: dataset/wav/THAISER/labels.csv
@@ -8,6 +8,8 @@ data:
     use_soft_target: False
     include_fru: False
     include_zoom: False
+    prune_corpus: True
+    turn_type: script
     train_mic: con
     cross_corpus:
       iemocap: dataset/wav/IEMOCAP_full_release/labels.csv
@@ -17,8 +19,8 @@ data:
 featurizer:
   feature_type: fbank
   feature_param:
-    num_mel_bins: &n_mel 40
-    frame_length: 50
+    num_mel_bins: &n_mel 64
+    frame_length: 25
     frame_shift: 10
     low_freq: 0
     high_freq: 8000
@@ -33,16 +35,16 @@ packer:
 model:
   n_channels: [64, 64, 128, 128]
   kernel_size: [5, 3, 3, 3]
-  pool_size: [4, 2, 2, 2]
+  pool_size: [2, 2, 2, 2]
   lstm_unit: 128
   
 train:
   batch_size: 64
-  n_iteration: 25
-  exp_path: log/cnnlstm_exp
+  n_iteration: 5
+  exp_path: iemocap-playground/thai-crosscorpus_script_prune
   trainer_param:
     progress_bar_refresh_rate: 0  # disable logging
     weights_summary: null  # disable logging
     max_epochs: 40
-    gpus: null
+    gpus: [0]
     

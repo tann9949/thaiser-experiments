@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple, Union, Optional
 
 import pandas as pd
 import torch
+import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
@@ -20,7 +21,8 @@ class BaseDataLoader:
     def __init__(self, 
         label_path: str,
         featurizer: Featurizer,
-        packer: FeaturePacker) -> None:
+        packer: FeaturePacker,
+        smoothing_param: Optional[float] = None) -> None:
         """
         Base Data Loader constructor
         """
@@ -28,12 +30,14 @@ class BaseDataLoader:
         self.label: pd.DataFrame = pd.read_csv(label_path);
         self.featurizer: Featurizer = featurizer;
         self.packer: FeaturePacker = packer;
+        self.smoothing_param: float = smoothing_param;
 
         # initialize train, val, test
         # must call self.setup() to instantiate these variables
         self.train: List[Dict[str, Union[Tensor, str]]] = None;
         self.val: List[Dict[str, Union[Tensor, str]]] = None;
         self.test: List[Dict[str, Union[Tensor, str]]] = None;
+
 
     def setup_train(self):
         """
@@ -69,6 +73,8 @@ class BaseDataLoader:
         """
         Override this method to declare self.test
         Each instance is a list of sample which is a dictionary format as follow
+        
+        This is optional because limitation of loading THAISER test with different mic
 
         Ex.
         self.train = [
@@ -78,7 +84,7 @@ class BaseDataLoader:
 
         Filter data as you wish by override this data and manipulating self.label
         """
-        raise NotImplementedError();
+        pass
 
     def compute_global_stats(self, save_path: str) -> None:
         """
@@ -118,6 +124,7 @@ class BaseDataLoader:
         # setup train, val, test
         self.setup_train();
         self.setup_val();
+        self.setup_test();
 
         # compute global stats if necessary
         if self.packer.stats_path is not None:
@@ -158,26 +165,36 @@ class BaseDataLoader:
             feature: Dict[str, Union[Tensor, str]] = self.featurizer(sample);
             samples: List[Dict[str, Tensor]] = self.packer(feature, frame_size=frame_size);
 
-            # rescoring with provided model
-            if model is not None and eta > 0.:
-                rescored_samples: List[Dict[str, Tensor]] = [];
-                for sample in samples:
-                    name: str = sample["name"];
-                    feature: Tensor = sample["feature"];  # feature, fbank
-                    emotion: Tensor = sample["emotion"];  # label distribution, R^{n_emotion}
-                    # calculate pseudo label from trained model
-                    pseudo_emotion: Tensor = model(feature.unsqueeze(dim=0))[0];
-                    # compute average
-                    rescored_emotion: Tensor = emotion * (1 - eta) + pseudo_emotion * eta;
-                    rescored_samples.append({"name": name, "feature": feature, "emotion": rescored_emotion})
-            else:
-                # do noting if no model provided or rescoring factor (eta) = 0 (not use pseudo label information)
-                rescored_samples: List[Dict[str, Tensor]] = samples;
-
             # add packed features into training data
-            train_samples += rescored_samples
+            train_samples += samples
 
         train_dataloader: DataLoader = DataLoader(train_samples, batch_size=batch_size, num_workers=0, shuffle=True);
+            
+        # rescore with provided model and factor eta
+        if model is not None and eta > 0.:
+            new_train_samples = [];
+            with torch.no_grad():
+                # move to gpu for faster computation
+                if torch.cuda.is_available():
+                    model.cuda();
+                # iterate over batches
+                for sample in train_dataloader:
+                    feature: Tensor = sample["feature"].cuda() if torch.cuda.is_available() else sample["feature"];  # feature, fbank; cuda if avail
+                    emotion: Tensor = sample["emotion"];  # label distribution, R^{Bxn_emotion}
+
+                    pseudo_emotion: Tensor = F.softmax(model(feature).cpu());
+                    rescored_emotion: Tensor = emotion * (1 - eta) + pseudo_emotion * (eta);  # R^{Bxn_emotion}
+
+                    assert len(feature) == len(rescored_emotion) == len(sample["name"]);
+                    for feat, label, name in zip(feature, rescored_emotion, sample["name"]):
+                        new_train_samples.append({"name": name, "feature": feat, "emotion": label})
+            
+            model.cpu()        
+            train_dataloader: DataLoader = DataLoader(new_train_samples, batch_size=batch_size, num_workers=0, shuffle=True);
+        
+        # smoothing if provided :TODO
+
+            
         return train_dataloader;
 
     def prepare_val(self, frame_size: float) -> DataLoader:

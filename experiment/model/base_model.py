@@ -5,19 +5,24 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 from torch.optim import Adam, Optimizer
+from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, CyclicLR
 
 
 class BaseModel(pl.LightningModule):
 
-    def __init__(self, hparams: Dict[str, Any] = {}, **kwargs) -> None:
-        super().__init__(**kwargs);
+    def __init__(
+            self, 
+            hparams: Dict[str, Any] = {},
+            schedule_learning_rate = False,
+            **kwargs
+        ) -> None:
+        super().__init__();
+        self.schedule_learning_rate = schedule_learning_rate
         self.hyperparams: Dict[str, Any] = hparams;
         self.learning_rate: float = self.hyperparams.get("learning_rate", 1e-4);
 
-    def decay_learning_rate(self, factor: float) -> float:
-        new_lr = self.learning_rate * factor
-        self.learning_rate = new_lr;
-        return new_lr;
+    def set_learning_rate(self, learning_rate: float) -> None:
+        self.learning_rate = learning_rate;
 
     def forward(self, x: Dict[str, Union[str, Tensor]], *args, **kwargs) -> Tensor:
         raise NotImplementedError();
@@ -47,6 +52,8 @@ class BaseModel(pl.LightningModule):
         feature: List[Tensor] = batch["feature"];
 
         with torch.no_grad():
+            # old methods
+            """
             # compute logits of each chunk
             probs: Tensor = torch.stack([F.softmax(self(x), dim=-1) for x in feature]);
             # compute loss by average loss from each chunk
@@ -75,6 +82,12 @@ class BaseModel(pl.LightningModule):
                 prediction: Tensor = unique[count.argmax()];
             prediction = prediction.unsqueeze(dim=0);
             acc: Tensor = self.compute_metric(prediction, emotion.argmax(dim=-1));
+            """
+            # average distance
+            logits: Tensor = torch.stack([self(x) for x in feature]).mean(dim=0)
+            probs: Tensor = F.softmax(logits, dim=-1)
+            loss: float = self.compute_loss(probs, emotion)
+            acc: Tensor = self.compute_metric(probs.argmax(-1), emotion.argmax(-1))
             
             metrics: Dict[str, float] = {"val_acc": acc, "val_loss": loss};
             self.log_dict(metrics);
@@ -87,5 +100,20 @@ class BaseModel(pl.LightningModule):
         return metrics;
 
     def configure_optimizers(self) -> Optimizer:
-        opt: Adam = Adam(self.parameters(), lr=self.learning_rate)
-        return opt;
+        if self.schedule_learning_rate:
+            opt = Adam(self.parameters(), lr=self.learning_rate)
+            return {
+                "optimizer": opt,
+                "lr_scheduler": {
+                    "scheduler": ReduceLROnPlateau(
+                        opt,
+                        factor=0.1,
+                        patience=3,
+                        verbose=True
+                    ),
+                    "monitor": "val_acc"
+                },
+            }
+        else:
+            opt: Adam = Adam(self.parameters(), lr=self.learning_rate)
+            return opt;
