@@ -1,4 +1,4 @@
-# ICASSP 2022 Experiments
+# THAI-SER Experiments
 
 ## Installation
 It is recommend to use linux based environment or MacOS.
