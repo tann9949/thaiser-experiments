@@ -1,4 +1,3 @@
-from numpy.core.numeric import cross
 from .data.feature.feature_packer import FeaturePacker
 from .data.feature.featurizer import Featurizer
 import json
@@ -156,7 +155,7 @@ class CirriculumWrapper:
                 print(">"*5, f"Training on Agreement value = {agreement:.2f}, learning rate = {lr}, eta = {eta}")
                 trainer.fit(
                     model, 
-                    train_dataloader=train_dataloader, 
+                    train_dataloaders=train_dataloader, 
                     val_dataloaders=val_dataloader
                 );
 

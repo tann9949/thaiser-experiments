@@ -104,7 +104,7 @@ def preprocess_EMOVO(raw_path: str, n_workers: Optional[int] = None) -> None:
         raise FileNotFoundError(f"Folder `{emovo_root}` not found, make sure to download the dataset as instructed in README.md");
 
     audio_files: List[str] = sorted(glob(f"{emovo_root}/**/*.wav", recursive=True));
-    pool: mp.Pool = mp.Pool(processes=n_workers);
+    pool = mp.Pool(processes=n_workers);
     pool.map(preprocess_audio, audio_files);  # multiprocessing convert
 
     generate_emovo_label(raw_path);

@@ -1,5 +1,3 @@
-from typing import Callable, List
-
 import torch
 from torch import Tensor
 

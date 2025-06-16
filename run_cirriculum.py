@@ -1,7 +1,5 @@
 from argparse import ArgumentParser, Namespace
 
-from numpy.core.numeric import cross
-from experiment.cirriculum_wrapper import CirriculumWrapper
 import json
 import logging
 import warnings
@@ -11,15 +9,14 @@ import numpy as np
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
+from experiment.cirriculum_wrapper import CirriculumWrapper
 from experiment.data.feature.feature_packer import FeaturePacker
 from experiment.data.feature.featurizer import Featurizer
 from experiment.data.thaiser import ThaiSERLoader
-from experiment.experiment_wrapper import ExperimentWrapper
 from experiment.model.cnnlstm import CNNLSTM
-from experiment.utils import notify_line, read_config
+from experiment.utils import read_config
 
 warnings.filterwarnings("ignore")
-pl.utilities.distributed.log.setLevel(logging.ERROR)
 
 
 def run_parser() -> Namespace:
@@ -167,9 +164,6 @@ def main(args: Namespace) -> None:
     # save experiment results
     with open(f"{exp_path}/exp_results.json", "w") as f:
         json.dump(fold_stats, f, indent=4);
-
-    # notify line
-    notify_line(template);
 
         
 if __name__ == "__main__":

@@ -33,8 +33,6 @@ train:
   learning_rates: 0.0001
   exp_path: log/iemocap-playground
   trainer_param:
-    progress_bar_refresh_rate: 0  # disable logging
-    weights_summary: null  # disable logging
     max_epochs: 30
-    gpus: [0]
+    # gpus: [0]
     

@@ -7,26 +7,22 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pytorch_lightning as pl
 import torch.nn as nn
-import torch.nn.functional as F
-from pytorch_lightning.callbacks import Callback, ModelCheckpoint, EarlyStopping
+from pytorch_lightning.callbacks import Callback, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from sklearn.metrics import confusion_matrix, accuracy_score
 from torch import Tensor
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, CyclicLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau, CyclicLR
 
 from experiment.data.feature.feature_packer import FeaturePacker
 from experiment.data.feature.featurizer import Featurizer
 from experiment.data.thaiser import ThaiSERLoader
-from experiment.experiment_wrapper import ExperimentWrapper
 from experiment.model.base_model import BaseModel
 from experiment.model.cnnlstm import CNNLSTM
-from experiment.utils import notify_line, read_config
 from experiment.evaluate import Evaluator
 
 warnings.filterwarnings("ignore")
-pl.utilities.distributed.log.setLevel(logging.ERROR)
 
 ROOT_DIR = "playground/finetune-emotion-baseline"
 
@@ -219,7 +215,7 @@ def train_emotion(root_dir, n_iter):
         print(f"Iteration {i}/10")
         model = get_model(n_classes=5)
         trainer = get_trainer(root_dir, "base", i)
-        trainer.fit(model, train_dataloader=train_dataloader, val_dataloaders=val_dataloader)
+        trainer.fit(model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader)
         trainer.save_checkpoint(f"{root_dir}/{i}/base-final.ckpt")
 
         cm, wa, ua = evaluate_model(model, test_loader)

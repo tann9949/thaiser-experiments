@@ -1,11 +1,11 @@
+import pickle
 from typing import Callable, Dict, Union, List, Optional
 from functools import partial
-import pickle
 
 import torch
 from torch import Tensor
 
-from .padding import pad_dup, pad_constant
+from .padding import pad_dup
 
 
 class FeaturePacker:

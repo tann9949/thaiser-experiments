@@ -43,8 +43,6 @@ train:
   learning_rates: [0.0001, 0.00005, 0.00001, 0.000005, 0.000001, 0.0000005, 0.0000001]
   exp_path: log/cirriculum-smoothing
   trainer_param:
-    progress_bar_refresh_rate: 0  # disable logging
-    weights_summary: null  # disable logging
     max_epochs: 5
-    gpus: [0]
+    # gpus: [0]
     
