@@ -96,7 +96,7 @@ class ExperimentWrapper:
             # train model using trainer
             trainer.fit(
                 model, 
-                train_dataloader=self.train_dataloader, 
+                train_dataloaders=self.train_dataloader, 
                 val_dataloaders=self.val_dataloader
             );
 

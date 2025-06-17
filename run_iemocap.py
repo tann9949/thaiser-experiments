@@ -89,7 +89,7 @@ def main(args: Namespace) -> None:
             ModelClass=CNNLSTM,
             hparams=config["model_hparams"],
             trainer_params=config["trainer_params"],
-            train_dataloader=train_dataloader,
+            train_dataloaders=train_dataloader,
             val_dataloader=val_dataloader,
             test_dataloader=test_loaders,
             n_iteration=n_iteration,
