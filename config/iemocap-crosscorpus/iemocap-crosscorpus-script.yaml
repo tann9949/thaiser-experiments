@@ -38,8 +38,6 @@ train:
   exp_path: iemocap-playground/iemocap-crosscorpus_script
   n_iteration: 5
   trainer_param:
-    progress_bar_refresh_rate: 0  # disable logging
-    weights_summary: null  # disable logging
     max_epochs: 30
     gpus: [0]
     

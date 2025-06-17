@@ -37,8 +37,6 @@ train:
   n_iteration: 5
   exp_path: log/baseline/four_emotions
   trainer_param:
-    progress_bar_refresh_rate: 0  # disable logging
-    weights_summary: null  # disable logging
     max_epochs: 40
-    gpus: [0]
+    # gpus: [0]
     
