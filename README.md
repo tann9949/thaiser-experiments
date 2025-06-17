@@ -110,5 +110,7 @@ done
 ```
 
 ## Authors
-Chompakorn Chaksangchaichot
-Ekapol Chungsuwanich
+
+- Chompakorn Chaksangchaichot
+- Ekapol Chungsuwanich (Advisor)
+- Sarana Nutanong (Co-Advisor)
