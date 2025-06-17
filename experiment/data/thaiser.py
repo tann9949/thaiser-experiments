@@ -106,7 +106,6 @@ class ThaiSERLoader(BaseDataLoader):
         if self.include_zoom:
             train = pd.concat([train, zoom], axis=0).reset_index(drop=True);
 
-        print(label)
         scores: np.ndarray = train[self.score_cols].values.astype(float);
         paths: np.ndarray = train["path"].values;
         
