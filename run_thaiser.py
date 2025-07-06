@@ -1,12 +1,9 @@
 from argparse import ArgumentParser, Namespace
 import json
-import logging
 import warnings
 from typing import Any, Dict, List
 
 import numpy as np
-import pytorch_lightning as pl
-from numpy.core.numeric import cross
 from torch.utils.data import DataLoader
 
 from experiment.data.feature.feature_packer import FeaturePacker
