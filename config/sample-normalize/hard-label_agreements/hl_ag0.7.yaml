@@ -42,5 +42,5 @@ train:
   exp_path: log/sample-normalize/hl_ag0.7
   trainer_param:
     max_epochs: 40
-    gpus: [0]
+    # gpus: [0]
     

@@ -3,8 +3,8 @@ data:
   test_zoom: True
   dataloader:
     label_path: dataset/wav/THAISER/labels.csv
-    agreement: 0.7
-    smoothing_param: 0.
+    agreement: 0.71
+    smoothing_param: 2.0
     use_soft_target: True
     include_fru: False
     include_zoom: False
@@ -39,7 +39,7 @@ model:
 train:
   batch_size: 32
   n_iteration: 5
-  exp_path: log/sample-normalize/sl_ag0.7
+  exp_path: log/sample-normalize-smoothing/sl_alpha2.0
   trainer_param:
     max_epochs: 40
     # gpus: [0]

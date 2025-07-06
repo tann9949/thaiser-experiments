@@ -9,6 +9,10 @@ data:
     include_fru: False
     include_zoom: False
     train_mic: con
+    cross_corpus:
+      iemocap: dataset/wav/IEMOCAP_full_release/labels.csv
+      emodb: dataset/wav/emodb/labels.csv
+      emovo: dataset/wav/EMOVO/labels.csv
 
 featurizer:
   feature_type: fbank
